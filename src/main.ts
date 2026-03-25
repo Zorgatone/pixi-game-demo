@@ -1,35 +1,261 @@
-import { Application, Assets, Sprite } from "pixi.js";
+import { Assets, Container } from "pixi.js";
 
-(async () => {
-  // Create a new application
-  const app = new Application();
+import {
+  MOBILE_BREAKPOINT,
+  MOBILE_SCALE,
+  SceneId,
+  BundleName,
+} from "./app/config";
+import { createApp } from "./app/createApp";
+import { type Scene } from "./core/Scene";
+import { SceneManager } from "./core/SceneManager";
+import { AceOfShadowsScene } from "./scenes/AceOfShadowsScene";
+import { MagicWordsScene } from "./scenes/MagicWordsScene";
+import { MainMenuScene, type MenuSceneId } from "./scenes/MainMenuScene";
+import { PhoenixFlameScene } from "./scenes/PhoenixFlameScene";
+import { FPSCounter } from "./ui/FPSCounter";
+import { LoadingOverlay } from "./ui/LoadingOverlay";
+import { UIButton } from "./ui/UIButton";
 
-  // Initialize the application
-  await app.init({ background: "#1099bb", resizeTo: window });
+import "./styles/index.css";
 
-  // Append the application canvas to the document body
+const FULLSCREEN_BUTTON_MARGIN_X = 20;
+const FULLSCREEN_BUTTON_MARGIN_Y = 40;
+
+const FULLSCREEN_BUTTON_WIDTH = 220;
+const FULLSCREEN_BUTTON_HEIGHT = 56;
+const FULLSCREEN_BUTTON_FONT_SIZE = 22;
+
+const FPS_FONT_SIZE = 20;
+
+async function bootstrap(): Promise<void> {
+  const app = await createApp();
+
   document.getElementById("pixi-container")!.appendChild(app.canvas);
 
-  // Load the bunny texture
-  const texture = await Assets.load("/assets/bunny.png");
+  const worldLayer = new Container();
+  const uiLayer = new Container();
 
-  // Create a bunny Sprite
-  const bunny = new Sprite(texture);
+  app.stage.addChild(worldLayer, uiLayer);
 
-  // Center the sprite's anchor point
-  bunny.anchor.set(0.5);
+  const sceneManager = new SceneManager(worldLayer);
 
-  // Move the sprite to the center of the screen
-  bunny.position.set(app.screen.width / 2, app.screen.height / 2);
+  const fps = new FPSCounter();
+  uiLayer.addChild(fps.view);
 
-  // Add the bunny to the stage
-  app.stage.addChild(bunny);
+  let isLoading = false;
 
-  // Listen for animate update
-  app.ticker.add((time) => {
-    // Just for fun, let's rotate mr rabbit a little.
-    // * Delta is 1 if running at 100% performance *
-    // * Creates frame-independent transformation *
-    bunny.rotation += 0.1 * time.deltaTime;
+  const loadingOverlay = new LoadingOverlay();
+  uiLayer.addChild(loadingOverlay);
+
+  const showScene = (scene: Scene): void => {
+    sceneManager.changeScene(scene, app.screen.width, app.screen.height);
+  };
+
+  const loadBundleWithOverlay = async (bundle: BundleName): Promise<void> => {
+    loadingOverlay.show();
+
+    try {
+      await Assets.loadBundle(bundle, (progress) => {
+        loadingOverlay.setProgress(progress);
+      });
+
+      loadingOverlay.setProgress(1);
+    } finally {
+      loadingOverlay.hide();
+    }
+  };
+
+  const openMenu = (): void => {
+    if (isLoading) {
+      return;
+    }
+
+    showScene(
+      new MainMenuScene({
+        onSelect: async (sceneId) => {
+          if (isLoading) {
+            return;
+          }
+
+          const sceneConfig = sceneFactories[sceneId];
+
+          isLoading = true;
+
+          try {
+            if (sceneConfig.bundle) {
+              await loadBundleWithOverlay(sceneConfig.bundle);
+            }
+
+            showScene(sceneConfig.create());
+          } finally {
+            isLoading = false;
+          }
+        },
+      }),
+    );
+  };
+
+  const sceneFactories: Record<
+    MenuSceneId,
+    { create: () => Scene; bundle?: BundleName }
+  > = {
+    [SceneId.AceOfShadows]: {
+      create: () =>
+        new AceOfShadowsScene({
+          onBackToMenu: openMenu,
+        }),
+      bundle: BundleName.AceOfShadows,
+    },
+
+    [SceneId.MagicWords]: {
+      create: () =>
+        new MagicWordsScene({
+          onBackToMenu: openMenu,
+        }),
+      bundle: BundleName.MagicWords,
+    },
+
+    [SceneId.PhoenixFlame]: {
+      create: () =>
+        new PhoenixFlameScene({
+          onBackToMenu: openMenu,
+        }),
+      bundle: BundleName.PhoenixFlame,
+    },
+  };
+
+  const isFullscreen = (): boolean => document.fullscreenElement !== null;
+
+  const updateFullscreenButtonLabel = (): void => {
+    fullscreenButton.setLabel(
+      isFullscreen() ? "Exit Fullscreen" : "Enter Fullscreen",
+    );
+  };
+
+  const toggleFullscreen = async (): Promise<void> => {
+    try {
+      if (isFullscreen()) {
+        await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch (error) {
+      console.error("Failed to toggle fullscreen:", error);
+    } finally {
+      updateFullscreenButtonLabel();
+      requestRelayout();
+    }
+  };
+
+  const fullscreenButton = new UIButton({
+    label: "Enter Fullscreen",
+    width: FULLSCREEN_BUTTON_WIDTH,
+    height: FULLSCREEN_BUTTON_HEIGHT,
+    fontSize: FULLSCREEN_BUTTON_FONT_SIZE,
+    onClick: () => {
+      if (isLoading) {
+        return;
+      }
+
+      void toggleFullscreen();
+    },
   });
-})();
+
+  uiLayer.addChild(fullscreenButton);
+
+  function layout(width: number, height: number): void {
+    const shortSide = Math.min(width, height);
+    const isMobile = shortSide < MOBILE_BREAKPOINT;
+
+    const scale = isMobile ? MOBILE_SCALE : 1;
+
+    const buttonWidth = FULLSCREEN_BUTTON_WIDTH * scale;
+    const buttonHeight = FULLSCREEN_BUTTON_HEIGHT * scale;
+
+    const marginX = FULLSCREEN_BUTTON_MARGIN_X;
+    const marginY = FULLSCREEN_BUTTON_MARGIN_Y;
+
+    const buttonFontSize = FULLSCREEN_BUTTON_FONT_SIZE * scale;
+    const fpsFontSize = FPS_FONT_SIZE * scale;
+
+    worldLayer.position.set(width * 0.5, height * 0.5);
+
+    fullscreenButton.resize(buttonWidth, buttonHeight, buttonFontSize);
+    fullscreenButton.position.set(width - buttonWidth - marginX, marginY);
+
+    fps.view.style.fontSize = fpsFontSize;
+    fps.view.position.set(12 * scale, 10 * scale);
+
+    loadingOverlay.resize(width, height, scale);
+  }
+
+  let needsRelayout = true;
+
+  const requestRelayout = (): void => {
+    needsRelayout = true;
+  };
+
+  const requestRelayoutTwice = (): void => {
+    needsRelayout = true;
+
+    requestAnimationFrame(() => {
+      needsRelayout = true;
+    });
+
+    window.setTimeout(() => {
+      needsRelayout = true;
+    }, 150);
+  };
+
+  document.addEventListener("fullscreenchange", () => {
+    updateFullscreenButtonLabel();
+    requestRelayoutTwice();
+  });
+
+  window.addEventListener("resize", requestRelayout);
+  window.screen.orientation?.addEventListener?.("change", requestRelayoutTwice);
+  window.visualViewport?.addEventListener?.("resize", requestRelayoutTwice);
+
+  updateFullscreenButtonLabel();
+
+  let previousTime = performance.now();
+  let previousWidth = app.screen.width;
+  let previousHeight = app.screen.height;
+
+  layout(previousWidth, previousHeight);
+  sceneManager.resize(previousWidth, previousHeight);
+
+  app.ticker.add(() => {
+    const now = performance.now();
+
+    const deltaTimeMs = now - previousTime;
+    previousTime = now;
+
+    const { width, height } = app.screen;
+    const sizeChanged = width !== previousWidth || height !== previousHeight;
+
+    if (sizeChanged || needsRelayout) {
+      previousWidth = width;
+      previousHeight = height;
+      needsRelayout = false;
+
+      layout(width, height);
+      sceneManager.resize(width, height);
+    }
+
+    fps.update(deltaTimeMs);
+
+    sceneManager.update({
+      width,
+      height,
+      deltaTimeMs,
+    });
+  });
+
+  await loadBundleWithOverlay(BundleName.Shared);
+
+  openMenu();
+}
+
+void bootstrap();
