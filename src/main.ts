@@ -18,6 +18,7 @@ import { LoadingOverlay } from "./ui/LoadingOverlay";
 import { UIButton } from "./ui/UIButton";
 
 import "./styles/index.css";
+import { getSafeAreaInsetPx } from "./utils/safeArea";
 
 const FULLSCREEN_BUTTON_MARGIN_X = 20;
 const FULLSCREEN_BUTTON_MARGIN_Y = 40;
@@ -27,15 +28,8 @@ const FULLSCREEN_BUTTON_HEIGHT = 56;
 const FULLSCREEN_BUTTON_FONT_SIZE = 22;
 
 const FPS_FONT_SIZE = 20;
-
-function getSafeAreaInsetPx(variableName: string): number {
-  const value = getComputedStyle(document.documentElement)
-    .getPropertyValue(variableName)
-    .trim();
-
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
+const FPS_MARGIN_X = 12;
+const FPS_MARGIN_Y = 10;
 
 function isFullscreenSupported(): boolean {
   const element = document.documentElement as HTMLElement & {
@@ -239,9 +233,13 @@ async function bootstrap(): Promise<void> {
 
     const safeAreaTop = getSafeAreaInsetPx("--sat");
     const safeAreaRight = getSafeAreaInsetPx("--sar");
+    const safeAreaLeft = getSafeAreaInsetPx("--sal");
 
-    const marginX = FULLSCREEN_BUTTON_MARGIN_X + safeAreaRight;
-    const marginY = FULLSCREEN_BUTTON_MARGIN_Y + safeAreaTop;
+    const buttonMarginX = FULLSCREEN_BUTTON_MARGIN_X + safeAreaRight;
+    const buttonMarginY = FULLSCREEN_BUTTON_MARGIN_Y + safeAreaTop;
+
+    const fpsMarginX = FPS_MARGIN_X * scale + safeAreaLeft;
+    const fpsMarginY = FPS_MARGIN_Y * scale + safeAreaTop;
 
     const buttonFontSize = FULLSCREEN_BUTTON_FONT_SIZE * scale;
     const fpsFontSize = FPS_FONT_SIZE * scale;
@@ -249,10 +247,13 @@ async function bootstrap(): Promise<void> {
     worldLayer.position.set(width * 0.5, height * 0.5);
 
     fullscreenButton.resize(buttonWidth, buttonHeight, buttonFontSize);
-    fullscreenButton.position.set(width - buttonWidth - marginX, marginY);
+    fullscreenButton.position.set(
+      width - buttonWidth - buttonMarginX,
+      buttonMarginY,
+    );
 
     fps.view.style.fontSize = fpsFontSize;
-    fps.view.position.set(12 * scale, 10 * scale);
+    fps.view.position.set(fpsMarginX, fpsMarginY);
 
     loadingOverlay.resize(width, height, scale);
   }
