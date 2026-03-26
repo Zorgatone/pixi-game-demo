@@ -1,6 +1,6 @@
 import { Container, Text, TextStyle } from "pixi.js";
 
-import { MOBILE_BREAKPOINT, MOBILE_SCALE, SceneId } from "../app/config";
+import { MOBILE_BREAKPOINT, MOBILE_UI_SCALE, SceneId } from "../app/config";
 import { Scene } from "../core/Scene";
 import { UIButton } from "../ui/UIButton";
 
@@ -74,7 +74,7 @@ export class MainMenuScene extends Scene {
     const shortSide = Math.min(width, height);
     const isMobile = shortSide < MOBILE_BREAKPOINT;
 
-    const scale = isMobile ? MOBILE_SCALE : 1;
+    const scale = isMobile ? MOBILE_UI_SCALE : 1;
 
     const titleFontSize = TITLE_FONT_SIZE * scale;
 

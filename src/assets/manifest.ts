@@ -1,13 +1,19 @@
+import { type AssetsManifest } from "pixi.js";
+
 import { BundleName } from "../app/config";
 
-export const manifest = {
+export const manifest: AssetsManifest = {
   bundles: [
     {
       name: BundleName.Shared,
+      assets: [],
+    },
+    {
+      name: BundleName.AceOfShadows,
       assets: [
         {
-          alias: "bunny",
-          src: "assets/bunny.png",
+          alias: "card",
+          src: "assets/card.png",
         },
       ],
     },

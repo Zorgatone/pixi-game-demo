@@ -1,6 +1,6 @@
 import { Text, TextStyle } from "pixi.js";
 
-import { SceneId, MOBILE_SCALE, MOBILE_BREAKPOINT } from "../app/config";
+import { SceneId, MOBILE_UI_SCALE, MOBILE_BREAKPOINT } from "../app/config";
 
 import { Scene } from "../core/Scene";
 import { UIButton } from "../ui/UIButton";
@@ -52,7 +52,7 @@ export class MagicWordsScene extends Scene {
     const shortSide = Math.min(width, height);
     const isMobile = shortSide < MOBILE_BREAKPOINT;
 
-    const scale = isMobile ? MOBILE_SCALE : 1;
+    const scale = isMobile ? MOBILE_UI_SCALE : 1;
 
     this._label.style.fontSize = LABEL_FONT_SIZE * scale;
 

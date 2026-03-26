@@ -2,7 +2,7 @@ import { Assets, Container } from "pixi.js";
 
 import {
   MOBILE_BREAKPOINT,
-  MOBILE_SCALE,
+  MOBILE_UI_SCALE,
   SceneId,
   BundleName,
 } from "./app/config";
@@ -28,6 +28,33 @@ const FULLSCREEN_BUTTON_FONT_SIZE = 22;
 
 const FPS_FONT_SIZE = 20;
 
+function getSafeAreaInsetPx(variableName: string): number {
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue(variableName)
+    .trim();
+
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isFullscreenSupported(): boolean {
+  const element = document.documentElement as HTMLElement & {
+    webkitRequestFullscreen?: () => Promise<void> | void;
+  };
+
+  const doc = document as Document & {
+    webkitFullscreenElement?: Element | null;
+    webkitExitFullscreen?: () => Promise<void> | void;
+  };
+
+  return !!(
+    element.requestFullscreen ||
+    element.webkitRequestFullscreen ||
+    doc.exitFullscreen ||
+    doc.webkitExitFullscreen
+  );
+}
+
 async function bootstrap(): Promise<void> {
   const app = await createApp();
 
@@ -44,6 +71,7 @@ async function bootstrap(): Promise<void> {
   uiLayer.addChild(fps.view);
 
   let isLoading = false;
+  const fullscreenSupported = isFullscreenSupported();
 
   const loadingOverlay = new LoadingOverlay();
   uiLayer.addChild(loadingOverlay);
@@ -125,25 +153,61 @@ async function bootstrap(): Promise<void> {
     },
   };
 
-  const isFullscreen = (): boolean => document.fullscreenElement !== null;
+  const isFullscreen = (): boolean => {
+    const doc = document as Document & {
+      webkitFullscreenElement?: Element | null;
+    };
 
-  const updateFullscreenButtonLabel = (): void => {
+    return (
+      document.fullscreenElement !== null ||
+      doc.webkitFullscreenElement !== null
+    );
+  };
+
+  const updateFullscreenButtonState = (): void => {
+    if (!fullscreenSupported) {
+      fullscreenButton.setLabel("Missing Fullscreen");
+      fullscreenButton.setEnabled(false);
+      return;
+    }
+
+    fullscreenButton.setEnabled(true);
     fullscreenButton.setLabel(
       isFullscreen() ? "Exit Fullscreen" : "Enter Fullscreen",
     );
   };
 
   const toggleFullscreen = async (): Promise<void> => {
+    if (!fullscreenSupported) {
+      return;
+    }
+
+    const element = document.documentElement as HTMLElement & {
+      webkitRequestFullscreen?: () => Promise<void> | void;
+    };
+
+    const doc = document as Document & {
+      webkitExitFullscreen?: () => Promise<void> | void;
+    };
+
     try {
       if (isFullscreen()) {
-        await document.exitFullscreen();
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if (doc.webkitExitFullscreen) {
+          await doc.webkitExitFullscreen();
+        }
       } else {
-        await document.documentElement.requestFullscreen();
+        if (element.requestFullscreen) {
+          await element.requestFullscreen();
+        } else if (element.webkitRequestFullscreen) {
+          await element.webkitRequestFullscreen();
+        }
       }
     } catch (error) {
       console.error("Failed to toggle fullscreen:", error);
     } finally {
-      updateFullscreenButtonLabel();
+      updateFullscreenButtonState();
       requestRelayout();
     }
   };
@@ -154,7 +218,7 @@ async function bootstrap(): Promise<void> {
     height: FULLSCREEN_BUTTON_HEIGHT,
     fontSize: FULLSCREEN_BUTTON_FONT_SIZE,
     onClick: () => {
-      if (isLoading) {
+      if (isLoading || !fullscreenSupported) {
         return;
       }
 
@@ -168,13 +232,16 @@ async function bootstrap(): Promise<void> {
     const shortSide = Math.min(width, height);
     const isMobile = shortSide < MOBILE_BREAKPOINT;
 
-    const scale = isMobile ? MOBILE_SCALE : 1;
+    const scale = isMobile ? MOBILE_UI_SCALE : 1;
 
     const buttonWidth = FULLSCREEN_BUTTON_WIDTH * scale;
     const buttonHeight = FULLSCREEN_BUTTON_HEIGHT * scale;
 
-    const marginX = FULLSCREEN_BUTTON_MARGIN_X;
-    const marginY = FULLSCREEN_BUTTON_MARGIN_Y;
+    const safeAreaTop = getSafeAreaInsetPx("--sat");
+    const safeAreaRight = getSafeAreaInsetPx("--sar");
+
+    const marginX = FULLSCREEN_BUTTON_MARGIN_X + safeAreaRight;
+    const marginY = FULLSCREEN_BUTTON_MARGIN_Y + safeAreaTop;
 
     const buttonFontSize = FULLSCREEN_BUTTON_FONT_SIZE * scale;
     const fpsFontSize = FPS_FONT_SIZE * scale;
@@ -209,7 +276,7 @@ async function bootstrap(): Promise<void> {
   };
 
   document.addEventListener("fullscreenchange", () => {
-    updateFullscreenButtonLabel();
+    updateFullscreenButtonState();
     requestRelayoutTwice();
   });
 
@@ -217,7 +284,7 @@ async function bootstrap(): Promise<void> {
   window.screen.orientation?.addEventListener?.("change", requestRelayoutTwice);
   window.visualViewport?.addEventListener?.("resize", requestRelayoutTwice);
 
-  updateFullscreenButtonLabel();
+  updateFullscreenButtonState();
 
   let previousTime = performance.now();
   let previousWidth = app.screen.width;
