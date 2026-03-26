@@ -18,6 +18,7 @@ import {
 
 import { Scene, type SceneContext } from "../core/Scene";
 import { UIButton } from "../ui/UIButton";
+import { getSafeAreaInsetPx } from "../utils/safeArea";
 
 interface AceSceneCallbacks {
   onBackToMenu: () => void;
@@ -256,6 +257,9 @@ export class AceOfShadowsScene extends Scene {
     const uiScale = isMobile ? MOBILE_UI_SCALE : 1;
     const gameScale = isMobile ? MOBILE_GAME_SCALE : 1;
 
+    const safeAreaTop = getSafeAreaInsetPx("--sat");
+    const safeAreaLeft = getSafeAreaInsetPx("--sal");
+
     this._label.style.fontSize = LABEL_FONT_SIZE * uiScale;
     this._label.position.set(0, -height * 0.37);
 
@@ -265,8 +269,8 @@ export class AceOfShadowsScene extends Scene {
 
     this._backButton.resize(buttonWidth, buttonHeight, buttonFontSize);
     this._backButton.position.set(
-      -width * 0.5 + BACK_BUTTON_MARGIN_X,
-      -height * 0.5 + BACK_BUTTON_MARGIN_Y,
+      -width * 0.5 + BACK_BUTTON_MARGIN_X + safeAreaLeft,
+      -height * 0.5 + BACK_BUTTON_MARGIN_Y + safeAreaTop,
     );
 
     this._cardWidth = CARD_WIDTH * gameScale;

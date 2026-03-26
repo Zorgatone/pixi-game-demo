@@ -4,6 +4,7 @@ import { SceneId, MOBILE_UI_SCALE, MOBILE_BREAKPOINT } from "../app/config";
 
 import { Scene } from "../core/Scene";
 import { UIButton } from "../ui/UIButton";
+import { getSafeAreaInsetPx } from "../utils/safeArea";
 
 interface AceSceneCallbacks {
   onBackToMenu: () => void;
@@ -54,6 +55,9 @@ export class MagicWordsScene extends Scene {
 
     const scale = isMobile ? MOBILE_UI_SCALE : 1;
 
+    const safeAreaTop = getSafeAreaInsetPx("--sat");
+    const safeAreaLeft = getSafeAreaInsetPx("--sal");
+
     this._label.style.fontSize = LABEL_FONT_SIZE * scale;
 
     this._label.position.set(0, 0);
@@ -68,8 +72,8 @@ export class MagicWordsScene extends Scene {
     this._backButton.resize(buttonWidth, buttonHeight, buttonFontSize);
 
     this._backButton.position.set(
-      -width * 0.5 + marginX,
-      -height * 0.5 + marginY,
+      -width * 0.5 + marginX + safeAreaLeft,
+      -height * 0.5 + marginY + safeAreaTop,
     );
   }
 }
