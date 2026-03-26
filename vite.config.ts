@@ -5,4 +5,5 @@ export default defineConfig({
     port: 8080,
     open: true,
   },
+  base: "",
 });
