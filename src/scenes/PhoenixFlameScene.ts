@@ -228,7 +228,7 @@ const FLAME_PARTS: FlamePartConfig[] = [
 export class PhoenixFlameScene extends Scene {
   public readonly id = SceneId.PhoenixFlame;
 
-  private readonly _label: Text;
+  private readonly _title: Text;
   private readonly _backButton: UIButton;
   private readonly _effectRoot = new Container();
   private readonly _flameParts: FlamePart[] = [];
@@ -239,7 +239,7 @@ export class PhoenixFlameScene extends Scene {
   public constructor(private readonly _callbacks: PhoenixSceneCallbacks) {
     super();
 
-    this._label = new Text({
+    this._title = new Text({
       text: "Phoenix Flame",
       style: new TextStyle({
         fill: 0xffffff,
@@ -248,7 +248,7 @@ export class PhoenixFlameScene extends Scene {
       }),
     });
 
-    this._label.anchor.set(0.5);
+    this._title.anchor.set(0.5);
 
     this._backButton = new UIButton({
       label: "Back to Menu",
@@ -260,7 +260,7 @@ export class PhoenixFlameScene extends Scene {
 
     this._createFlameSprites();
 
-    this.root.addChild(this._effectRoot, this._label, this._backButton);
+    this.root.addChild(this._effectRoot, this._title, this._backButton);
   }
 
   public override onResize(width: number, height: number): void {
@@ -273,8 +273,8 @@ export class PhoenixFlameScene extends Scene {
     const safeAreaTop = getSafeAreaInsetPx("--sat");
     const safeAreaLeft = getSafeAreaInsetPx("--sal");
 
-    this._label.style.fontSize = LABEL_FONT_SIZE * uiScale;
-    this._label.position.set(0, -height * 0.36);
+    this._title.style.fontSize = LABEL_FONT_SIZE * uiScale;
+    this._title.position.set(0, -height * 0.36);
 
     const buttonWidth = BACK_BUTTON_WIDTH * uiScale;
     const buttonHeight = BACK_BUTTON_HEIGHT * uiScale;
