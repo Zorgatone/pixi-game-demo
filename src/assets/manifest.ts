@@ -23,7 +23,14 @@ export const manifest: AssetsManifest = {
     },
     {
       name: BundleName.PhoenixFlame,
-      assets: [],
+      assets: [
+        { alias: "ember", src: "assets/ember.png" },
+        { alias: "flame_large", src: "assets/flame_large.png" },
+        { alias: "flame_medium", src: "assets/flame_medium.png" },
+        { alias: "flame_small", src: "assets/flame_small.png" },
+        { alias: "halo", src: "assets/halo.png" },
+        { alias: "spark", src: "assets/spark.png" },
+      ],
     },
   ],
 };
