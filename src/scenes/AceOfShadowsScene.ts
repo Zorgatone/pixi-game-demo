@@ -165,7 +165,7 @@ class CardStack extends Container {
 export class AceOfShadowsScene extends Scene {
   public readonly id = SceneId.AceOfShadows;
 
-  private readonly _label: Text;
+  private readonly _title: Text;
   private readonly _backButton: UIButton;
 
   private readonly _stackLayer = new Container();
@@ -214,7 +214,7 @@ export class AceOfShadowsScene extends Scene {
   public constructor(private readonly _callbacks: AceSceneCallbacks) {
     super();
 
-    this._label = new Text({
+    this._title = new Text({
       text: "Ace of Shadows",
       style: new TextStyle({
         fill: 0xffffff,
@@ -222,7 +222,7 @@ export class AceOfShadowsScene extends Scene {
         fontWeight: "bold",
       }),
     });
-    this._label.anchor.set(0.5, 0);
+    this._title.anchor.set(0.5, 0);
 
     this._backButton = new UIButton({
       label: "Back to Menu",
@@ -238,7 +238,7 @@ export class AceOfShadowsScene extends Scene {
     this.root.addChild(
       this._stackLayer,
       this._flyingLayer,
-      this._label,
+      this._title,
       this._backButton,
     );
 
@@ -260,8 +260,8 @@ export class AceOfShadowsScene extends Scene {
     const safeAreaTop = getSafeAreaInsetPx("--sat");
     const safeAreaLeft = getSafeAreaInsetPx("--sal");
 
-    this._label.style.fontSize = LABEL_FONT_SIZE * uiScale;
-    this._label.position.set(0, -height * 0.37);
+    this._title.style.fontSize = LABEL_FONT_SIZE * uiScale;
+    this._title.position.set(0, -height * 0.37);
 
     const buttonWidth = BACK_BUTTON_WIDTH * uiScale;
     const buttonHeight = BACK_BUTTON_HEIGHT * uiScale;

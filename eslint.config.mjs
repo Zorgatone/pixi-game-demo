@@ -28,6 +28,7 @@ export default defineConfig([
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      "prefer-const": "warn",
     },
   },
 ]);
