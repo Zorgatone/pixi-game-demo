@@ -7,6 +7,7 @@ const DEFAULT_BAR_HEIGHT = 20;
 const DEFAULT_BAR_RADIUS = 10;
 
 const DEFAULT_LABEL_FONT_SIZE = 24;
+const BAR_Y = 24;
 
 export interface LoadingOverlayOptions {
   barWidth?: number;
@@ -21,11 +22,12 @@ export class LoadingOverlay extends Container {
   private readonly _barBg: Graphics;
   private readonly _barFill: Graphics;
 
-  private _barWidth: number;
-  private _barHeight: number;
-  private _barRadius: number;
-  private _labelFontSize: number;
+  private readonly _barWidth: number;
+  private readonly _barHeight: number;
+  private readonly _barRadius: number;
+
   private _progress = 0;
+  private _currentScale = 1;
 
   public constructor(options: LoadingOverlayOptions = {}) {
     super();
@@ -35,7 +37,6 @@ export class LoadingOverlay extends Container {
     this._barWidth = options.barWidth ?? DEFAULT_BAR_WIDTH;
     this._barHeight = options.barHeight ?? DEFAULT_BAR_HEIGHT;
     this._barRadius = DEFAULT_BAR_RADIUS;
-    this._labelFontSize = options.labelFontSize ?? DEFAULT_LABEL_FONT_SIZE;
 
     this._dim = new Graphics();
     this._panel = new Container();
@@ -44,7 +45,7 @@ export class LoadingOverlay extends Container {
       text: "Loading... 0%",
       style: new TextStyle({
         fill: 0xffffff,
-        fontSize: this._labelFontSize,
+        fontSize: options.labelFontSize ?? DEFAULT_LABEL_FONT_SIZE,
         fontWeight: "bold",
       }),
     });
@@ -78,9 +79,9 @@ export class LoadingOverlay extends Container {
   }
 
   public resize(width: number, height: number, scale = 1): void {
-    const labelFontSize = DEFAULT_LABEL_FONT_SIZE * scale;
+    this._currentScale = scale;
 
-    this._label.style.fontSize = labelFontSize;
+    this._label.style.fontSize = DEFAULT_LABEL_FONT_SIZE * this._currentScale;
     this._label.position.set(0, 0);
 
     this._dim.clear().rect(0, 0, width, height).fill({
@@ -92,31 +93,31 @@ export class LoadingOverlay extends Container {
       .clear()
       .roundRect(
         -this._barWidth * 0.5,
-        this._getBarY(scale),
+        this._getBarY(),
         this._barWidth,
         this._barHeight,
         this._barRadius,
       )
       .fill(0x2c2c44);
 
-    this._redrawBarFill(scale);
+    this._redrawBarFill();
 
     this._panel.position.set(
       width * 0.5,
-      height * 0.5 + PANEL_OFFSET_Y * scale,
+      height * 0.5 + PANEL_OFFSET_Y * this._currentScale,
     );
   }
 
-  private _getBarY(scale = 1): number {
-    return 24 * scale;
+  private _getBarY(): number {
+    return BAR_Y * this._currentScale;
   }
 
-  private _redrawBarFill(scale = 1): void {
+  private _redrawBarFill(): void {
     this._barFill
       .clear()
       .roundRect(
         -this._barWidth * 0.5,
-        this._getBarY(scale),
+        this._getBarY(),
         this._barWidth * this._progress,
         this._barHeight,
         this._barRadius,
