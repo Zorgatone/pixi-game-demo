@@ -1,5 +1,4 @@
 import {
-  Assets,
   Container,
   FederatedPointerEvent,
   Graphics,
@@ -24,51 +23,23 @@ import {
 import { Scene, type SceneContext } from "../core/Scene";
 import { UIButton } from "../ui/UIButton";
 import { getSafeAreaInsetPx } from "../utils/safeArea";
+import { loadDialogueResources } from "./magicWords/dialogueLoader";
+import {
+  countVisibleCharacters,
+  createVisibleRichText,
+  tokenizeRichText,
+} from "./magicWords/richText";
+import {
+  type DialogueResponse,
+  type LoadedAvatar,
+  type RichToken,
+  type SceneStatus,
+  type SpeakerSide,
+} from "./magicWords/types";
 
 interface MagicWordsSceneCallbacks {
   onBackToMenu: () => void;
 }
-
-interface DialogueLine {
-  name: string;
-  text: string;
-}
-
-interface EmojiDefinition {
-  name: string;
-  url: string;
-}
-
-interface AvatarDefinition {
-  name: string;
-  url: string;
-  position: "left" | "right";
-}
-
-interface DialogueResponse {
-  dialogue: DialogueLine[];
-  emojies: EmojiDefinition[];
-  avatars: AvatarDefinition[];
-}
-
-interface LoadedAvatar {
-  texture: Texture;
-  position: "left" | "right";
-}
-
-interface RichTokenText {
-  type: "text";
-  value: string;
-}
-
-interface RichTokenEmoji {
-  type: "emoji";
-  name: string;
-}
-
-type RichToken = RichTokenText | RichTokenEmoji;
-type SceneStatus = "idle" | "loading" | "ready" | "error";
-type SpeakerSide = "left" | "right";
 
 const LABEL_FONT_SIZE = 36;
 
@@ -102,9 +73,6 @@ const AVATAR_SIDE_MARGIN = 36;
 const AVATAR_BOTTOM_OFFSET = 12;
 
 const EMOJI_SIZE = 30;
-const INLINE_ITEM_GAP = 4;
-const LINE_GAP = 8;
-
 const TYPEWRITER_CHARS_PER_SECOND = 38;
 const PROMPT_BLINK_SPEED = 5;
 
@@ -118,51 +86,12 @@ const NAME_FILL = 0xffdc7a;
 const TEXT_FILL = 0xffffff;
 const PROMPT_FILL = 0xcfd5ff;
 
-const DICEBEAR_FUN_EMOJI_BASE = "https://api.dicebear.com/9.x/fun-emoji/png";
-const DICEBEAR_PERSONAS_BASE = "https://api.dicebear.com/9.x/personas/png";
-
-const FALLBACK_EMOJI_BG = 0xf3b63a;
-const FALLBACK_EMOJI_TEXT = 0x2b1b00;
-
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function parseEmojiToken(raw: string): string | null {
-  const match = raw.match(/^\{([a-zA-Z0-9_]+)\}$/);
-  return match?.[1] ?? null;
-}
-
-function tokenizeRichText(text: string): RichToken[] {
-  return text.split(/(\{[a-zA-Z0-9_]+\})/).flatMap((part): RichToken[] => {
-    if (!part) {
-      return [];
-    }
-
-    const emojiName = parseEmojiToken(part);
-    if (emojiName) {
-      return [{ type: "emoji" as const, name: emojiName }];
-    }
-
-    return part
-      .split(/(\s+)/)
-      .filter((token) => token.length > 0)
-      .map((token) => ({ type: "text" as const, value: token }));
-  });
-}
-
-function normalizeRemoteImageUrl(url: string): string {
-  return url.replace(
-    "https://api.dicebear.com:82/",
-    "https://api.dicebear.com/",
-  );
-}
-
-async function loadRemoteTexture(url: string): Promise<Texture> {
-  return await Assets.load<Texture>({
-    src: normalizeRemoteImageUrl(url),
-    parser: "loadTextures",
-  });
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
 }
 
 function makeStatusTextStyle(fontSize: number): TextStyle {
@@ -184,117 +113,12 @@ function makeNameTextStyle(fontSize: number): TextStyle {
   });
 }
 
-function makeMessageTextStyle(fontSize: number): TextStyle {
-  return new TextStyle({
-    fill: TEXT_FILL,
-    fontSize,
-    wordWrap: false,
-  });
-}
-
 function makePromptTextStyle(fontSize: number): TextStyle {
   return new TextStyle({
     fill: PROMPT_FILL,
     fontSize,
     fontWeight: "bold",
   });
-}
-
-function makeFallbackEmoji(label: string, size: number): Container {
-  const root = new Container();
-
-  const bg = new Graphics()
-    .roundRect(0, 0, size, size, Math.max(6, size * 0.28))
-    .fill(FALLBACK_EMOJI_BG);
-
-  const text = new Text({
-    text: label.slice(0, 2).toUpperCase(),
-    style: new TextStyle({
-      fill: FALLBACK_EMOJI_TEXT,
-      fontSize: size * 0.42,
-      fontWeight: "bold",
-    }),
-  });
-
-  text.anchor.set(0.5);
-  text.position.set(size * 0.5, size * 0.5);
-
-  root.addChild(bg, text);
-  return root;
-}
-
-function countVisibleCharacters(tokens: RichToken[]): number {
-  let total = 0;
-
-  for (const token of tokens) {
-    total += token.type === "emoji" ? 1 : token.value.length;
-  }
-
-  return total;
-}
-
-function hashString(input: string): number {
-  let hash = 2166136261;
-
-  for (let index = 0; index < input.length; index += 1) {
-    hash ^= input.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-
-  return hash >>> 0;
-}
-
-function pickFrom<T>(items: readonly T[], hash: number, offset: number): T {
-  return items[(hash + offset) % items.length];
-}
-
-function buildMissingEmojiUrl(name: string): string {
-  const url = new URL(DICEBEAR_FUN_EMOJI_BASE);
-  url.searchParams.set("seed", name);
-  return url.toString();
-}
-
-function buildMissingAvatarUrl(name: string): string {
-  const hash = hashString(name);
-
-  const bodies = ["squared", "checkered"] as const;
-  const clothingColors = [
-    "6dbb58",
-    "f55d81",
-    "f3b63a",
-    "5bc0eb",
-    "b18cff",
-    "ff9f1c",
-  ] as const;
-  const eyes = ["open", "happy", "glasses"] as const;
-  const hairs = ["buzzcut", "extraLong", "shortCombover"] as const;
-  const hairColors = [
-    "6c4545",
-    "f29c65",
-    "362c47",
-    "2b2b2b",
-    "7a4f2b",
-  ] as const;
-  const mouths = ["smirk", "smile", "surprise"] as const;
-  const noses = ["smallRound", "mediumRound"] as const;
-  const skinColors = ["e5a07e", "d78774", "c67863", "f0b68d"] as const;
-
-  const url = new URL(DICEBEAR_PERSONAS_BASE);
-  url.searchParams.set("seed", name);
-  url.searchParams.set("body", pickFrom(bodies, hash, 1));
-  url.searchParams.set("clothingColor", pickFrom(clothingColors, hash, 2));
-  url.searchParams.set("eyes", pickFrom(eyes, hash, 3));
-  url.searchParams.set("hair", pickFrom(hairs, hash, 4));
-  url.searchParams.set("hairColor", pickFrom(hairColors, hash, 5));
-  url.searchParams.set("mouth", pickFrom(mouths, hash, 6));
-  url.searchParams.set("nose", pickFrom(noses, hash, 7));
-  url.searchParams.set("skinColor", pickFrom(skinColors, hash, 8));
-
-  return url.toString();
-}
-
-function buildMissingAvatarPosition(name: string): "left" | "right" {
-  return hashString(name) % 2 === 0 ? "left" : "right";
 }
 
 export class MagicWordsScene extends Scene {
@@ -317,11 +141,12 @@ export class MagicWordsScene extends Scene {
 
   private _status: SceneStatus = "idle";
   private _errorMessage = "";
-  private _loadStarted = false;
 
   private _data: DialogueResponse | null = null;
   private readonly _emojiTextures = new Map<string, Texture>();
   private readonly _avatarTextures = new Map<string, LoadedAvatar>();
+  private _loadAbortController: AbortController | null = null;
+  private _isDisposed = false;
 
   private _viewportWidth = 0;
   private _viewportHeight = 0;
@@ -404,6 +229,12 @@ export class MagicWordsScene extends Scene {
     this._applyReadyVisibility(false);
   }
 
+  public override onEnter(): void {
+    if (this._status === "idle") {
+      void this._loadDialogue();
+    }
+  }
+
   public override onResize(width: number, height: number): void {
     this._viewportWidth = width;
     this._viewportHeight = height;
@@ -476,19 +307,15 @@ export class MagicWordsScene extends Scene {
     if (this._status === "ready" && this._data) {
       this._refreshCurrentDialogueVisuals();
       this._rebuildMessageContent();
-    } else {
-      this._drawDialoguePanel(this._speakerSide);
-      this._layoutSpeakerName();
-      this._updateStatusText();
+      return;
     }
+
+    this._drawDialoguePanel(this._speakerSide);
+    this._layoutSpeakerName();
+    this._updateStatusText();
   }
 
   public override update(context: SceneContext): void {
-    if (!this._loadStarted) {
-      this._loadStarted = true;
-      void this._loadDialogue();
-    }
-
     if (this._status !== "ready" || !this._data) {
       return;
     }
@@ -527,7 +354,6 @@ export class MagicWordsScene extends Scene {
     }
 
     const hasNextDialogue =
-      this._data !== null &&
       this._dialogueIndex < this._data.dialogue.length - 1;
 
     if (this._currentDialogueDone && hasNextDialogue) {
@@ -535,94 +361,53 @@ export class MagicWordsScene extends Scene {
       this._promptText.alpha =
         0.55 +
         (Math.sin(performance.now() * 0.001 * PROMPT_BLINK_SPEED) + 1) * 0.225;
-    } else {
-      this._promptText.visible = false;
+      return;
     }
+
+    this._promptText.visible = false;
+  }
+
+  public override onExit(): void {
+    this._loadAbortController?.abort();
+    this._stopTypingSound();
+  }
+
+  public override destroy(): void {
+    this._isDisposed = true;
+    this._loadAbortController?.abort();
+    this._clearMessageContent();
+    this._stopTypingSound();
+    super.destroy();
   }
 
   private async _loadDialogue(): Promise<void> {
+    const abortController = new AbortController();
+    this._loadAbortController = abortController;
     this._status = "loading";
     this._applyReadyVisibility(false);
     this._updateStatusText();
 
     try {
-      const response = await fetch(DIALOGUE_ENDPOINT);
+      const resources = await loadDialogueResources(
+        DIALOGUE_ENDPOINT,
+        abortController.signal,
+      );
 
-      if (!response.ok) {
-        throw new Error(`${response.status} ${response.statusText}`);
+      if (this._isDisposed || abortController.signal.aborted) {
+        return;
       }
 
-      const data = (await response.json()) as DialogueResponse;
+      this._emojiTextures.clear();
+      resources.emojiTextures.forEach((texture, name) => {
+        this._emojiTextures.set(name, texture);
+      });
 
-      const emojiDefinitions = new Map<string, EmojiDefinition>();
-      for (const emoji of data.emojies) {
-        emojiDefinitions.set(emoji.name, {
-          name: emoji.name,
-          url: normalizeRemoteImageUrl(emoji.url),
-        });
-      }
+      this._avatarTextures.clear();
+      resources.avatarTextures.forEach((avatar, name) => {
+        this._avatarTextures.set(name, avatar);
+      });
 
-      const avatarDefinitions = new Map<string, AvatarDefinition>();
-      for (const avatar of data.avatars) {
-        avatarDefinitions.set(avatar.name, {
-          name: avatar.name,
-          url: normalizeRemoteImageUrl(avatar.url),
-          position: avatar.position,
-        });
-      }
-
-      const dialogueEmojiNames = new Set<string>();
-      const dialogueSpeakerNames = new Set<string>();
-
-      for (const line of data.dialogue) {
-        dialogueSpeakerNames.add(line.name);
-
-        for (const token of tokenizeRichText(line.text)) {
-          if (token.type === "emoji") {
-            dialogueEmojiNames.add(token.name);
-          }
-        }
-      }
-
-      for (const emojiName of dialogueEmojiNames) {
-        if (!emojiDefinitions.has(emojiName)) {
-          emojiDefinitions.set(emojiName, {
-            name: emojiName,
-            url: buildMissingEmojiUrl(emojiName),
-          });
-        }
-      }
-
-      for (const speakerName of dialogueSpeakerNames) {
-        if (!avatarDefinitions.has(speakerName)) {
-          avatarDefinitions.set(speakerName, {
-            name: speakerName,
-            url: buildMissingAvatarUrl(speakerName),
-            position: buildMissingAvatarPosition(speakerName),
-          });
-        }
-      }
-
-      await Promise.all([
-        ...Array.from(emojiDefinitions.values()).map(async (emoji) => {
-          const texture = await loadRemoteTexture(emoji.url);
-          this._emojiTextures.set(emoji.name, texture);
-        }),
-        ...Array.from(avatarDefinitions.values()).map(async (avatar) => {
-          const texture = await loadRemoteTexture(avatar.url);
-          this._avatarTextures.set(avatar.name, {
-            texture,
-            position: avatar.position,
-          });
-        }),
-      ]);
-
-      this._data = {
-        dialogue: data.dialogue,
-        emojies: Array.from(emojiDefinitions.values()),
-        avatars: Array.from(avatarDefinitions.values()),
-      };
-
+      this._data = resources.data;
       this._status = "ready";
       this._errorMessage = "";
       this._dialogueIndex = 0;
@@ -631,11 +416,23 @@ export class MagicWordsScene extends Scene {
       this._setupDialogueAtCurrentIndex();
       this._updateStatusText();
     } catch (error) {
+      if (
+        this._isDisposed ||
+        abortController.signal.aborted ||
+        isAbortError(error)
+      ) {
+        return;
+      }
+
       this._status = "error";
       this._errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       this._applyReadyVisibility(false);
       this._updateStatusText();
+    } finally {
+      if (this._loadAbortController === abortController) {
+        this._loadAbortController = null;
+      }
     }
   }
 
@@ -649,7 +446,13 @@ export class MagicWordsScene extends Scene {
     if (!isReady) {
       this._leftAvatarSprite.visible = false;
       this._rightAvatarSprite.visible = false;
-      this._messageRoot.removeChildren();
+      this._clearMessageContent();
+    }
+  }
+
+  private _clearMessageContent(): void {
+    for (const child of this._messageRoot.removeChildren()) {
+      child.destroy({ children: true });
     }
   }
 
@@ -690,10 +493,6 @@ export class MagicWordsScene extends Scene {
     this._rebuildMessageContent();
   }
 
-  public override onExit(): void {
-    this._stopTypingSound();
-  }
-
   private _refreshCurrentDialogueVisuals(): void {
     if (!this._data) {
       return;
@@ -706,16 +505,13 @@ export class MagicWordsScene extends Scene {
     this._rightAvatarSprite.visible = false;
     this._speakerSide = "left";
 
-    if (avatar) {
-      if (avatar.position === "right") {
-        this._speakerSide = "right";
-        this._rightAvatarSprite.texture = avatar.texture;
-        this._rightAvatarSprite.visible = true;
-      } else {
-        this._speakerSide = "left";
-        this._leftAvatarSprite.texture = avatar.texture;
-        this._leftAvatarSprite.visible = true;
-      }
+    if (avatar?.position === "right") {
+      this._speakerSide = "right";
+      this._rightAvatarSprite.texture = avatar.texture;
+      this._rightAvatarSprite.visible = true;
+    } else if (avatar) {
+      this._leftAvatarSprite.texture = avatar.texture;
+      this._leftAvatarSprite.visible = true;
     }
 
     this._drawDialoguePanel(this._speakerSide);
@@ -723,19 +519,20 @@ export class MagicWordsScene extends Scene {
   }
 
   private _rebuildMessageContent(): void {
-    this._messageRoot.removeChildren();
+    this._clearMessageContent();
 
     const messageFontSize = MESSAGE_FONT_SIZE * this._uiScale;
     const emojiSize = EMOJI_SIZE * this._uiScale;
     const maxTextWidth = this._panelWidth - DIALOGUE_PANEL_SIDE_PADDING * 2;
 
-    const content = this._createVisibleRichText(
-      this._currentTokens,
-      this._visibleCharacterCount,
-      maxTextWidth,
-      messageFontSize,
+    const content = createVisibleRichText({
+      tokens: this._currentTokens,
+      visibleCharacters: this._visibleCharacterCount,
+      maxWidth: maxTextWidth,
+      fontSize: messageFontSize,
       emojiSize,
-    );
+      emojiTextures: this._emojiTextures,
+    });
 
     const messageY =
       this._panelY +
@@ -817,115 +614,6 @@ export class MagicWordsScene extends Scene {
     );
   }
 
-  private _createVisibleRichText(
-    tokens: RichToken[],
-    visibleCharacters: number,
-    maxWidth: number,
-    fontSize: number,
-    emojiSize: number,
-  ): Container {
-    const root = new Container();
-
-    let remainingCharacters = visibleCharacters;
-    let cursorX = 0;
-    let cursorY = 0;
-    const lineHeight = fontSize * 1.3;
-    let currentLineMaxHeight = lineHeight;
-
-    for (const token of tokens) {
-      if (remainingCharacters <= 0) {
-        break;
-      }
-
-      let node: Container | Sprite | Text | null = null;
-      let visibleNodeWidth = 0;
-      let wrapWidth = 0;
-      let nodeHeight = 0;
-      let nodeYOffset = 0;
-
-      if (token.type === "emoji") {
-        const texture = this._emojiTextures.get(token.name);
-
-        if (texture) {
-          const emojiSprite = new Sprite(texture);
-          emojiSprite.width = emojiSize;
-          emojiSprite.height = emojiSize;
-          node = emojiSprite;
-        } else {
-          node = makeFallbackEmoji(token.name, emojiSize);
-        }
-
-        visibleNodeWidth = emojiSize;
-        wrapWidth = emojiSize;
-        nodeHeight = emojiSize;
-        nodeYOffset = (lineHeight - emojiSize) * 0.5;
-
-        const willOverflow = cursorX > 0 && cursorX + wrapWidth > maxWidth;
-
-        if (willOverflow) {
-          cursorX = 0;
-          cursorY += currentLineMaxHeight + LINE_GAP;
-          currentLineMaxHeight = lineHeight;
-          nodeYOffset = (lineHeight - emojiSize) * 0.5;
-        }
-
-        node.position.set(cursorX, cursorY + nodeYOffset);
-        root.addChild(node);
-
-        cursorX += visibleNodeWidth + INLINE_ITEM_GAP;
-        currentLineMaxHeight = Math.max(currentLineMaxHeight, nodeHeight);
-
-        remainingCharacters -= 1;
-        continue;
-      }
-
-      const fullToken = token.value;
-      const sliceLength = Math.min(fullToken.length, remainingCharacters);
-      const visibleText = fullToken.slice(0, sliceLength);
-
-      if (visibleText.length <= 0) {
-        continue;
-      }
-
-      const isWhitespace = fullToken.trim().length === 0;
-
-      const fullMeasureNode = new Text({
-        text: fullToken,
-        style: makeMessageTextStyle(fontSize),
-      });
-
-      wrapWidth = fullMeasureNode.width;
-
-      const willOverflow =
-        cursorX > 0 && !isWhitespace && cursorX + wrapWidth > maxWidth;
-
-      if (willOverflow) {
-        cursorX = 0;
-        cursorY += currentLineMaxHeight + LINE_GAP;
-        currentLineMaxHeight = lineHeight;
-      }
-
-      const visibleNode = new Text({
-        text: visibleText,
-        style: makeMessageTextStyle(fontSize),
-      });
-
-      node = visibleNode;
-      visibleNodeWidth = visibleNode.width;
-      nodeHeight = visibleNode.height;
-
-      node.position.set(cursorX, cursorY);
-      root.addChild(node);
-
-      cursorX += visibleNodeWidth + INLINE_ITEM_GAP;
-      currentLineMaxHeight = Math.max(currentLineMaxHeight, nodeHeight);
-
-      remainingCharacters -= sliceLength;
-    }
-
-    return root;
-  }
-
   private _onAdvanceDialogue(_event: FederatedPointerEvent): void {
     if (this._status !== "ready" || !this._data) {
       return;
@@ -945,6 +633,7 @@ export class MagicWordsScene extends Scene {
 
     const hasNextDialogue =
       this._dialogueIndex < this._data.dialogue.length - 1;
+
     if (!hasNextDialogue) {
       return;
     }

@@ -13,6 +13,14 @@ export const enum SceneId {
   PhoenixFlame = "phoenix-flame",
 }
 
+export const PLAYABLE_SCENE_IDS = [
+  SceneId.AceOfShadows,
+  SceneId.MagicWords,
+  SceneId.PhoenixFlame,
+] as const;
+
+export type PlayableSceneId = (typeof PLAYABLE_SCENE_IDS)[number];
+
 export const enum BundleName {
   Shared = "shared",
   MainMenu = SceneId.MainMenu,

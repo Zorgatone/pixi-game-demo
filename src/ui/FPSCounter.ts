@@ -43,4 +43,9 @@ export class FPSCounter {
       this._frames = 0;
     }
   }
+
+  public layout(x: number, y: number, fontSize: number): void {
+    this.view.style.fontSize = fontSize;
+    this.view.position.set(x, y);
+  }
 }

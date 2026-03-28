@@ -4,7 +4,6 @@ import { APP_BG } from "./config";
 
 export async function createApp(): Promise<Application> {
   const app = new Application();
-
   const pixiContainer = document.getElementById("pixi-container")!;
 
   await app.init({
@@ -16,6 +15,7 @@ export async function createApp(): Promise<Application> {
   });
 
   await Assets.init({ manifest });
+  pixiContainer.appendChild(app.canvas);
 
   return app;
 }
