@@ -15,6 +15,10 @@ export const manifest: AssetsManifest = {
           alias: "main-menu",
           src: "assets/main-menu.mp3",
         },
+        {
+          alias: "click",
+          src: "assets/click.mp3",
+        },
       ],
     },
     {
@@ -28,6 +32,10 @@ export const manifest: AssetsManifest = {
           alias: "ace-of-shadows",
           src: "assets/ace-of-shadows.mp3",
         },
+        {
+          alias: "card-flip",
+          src: "assets/card-flip.mp3",
+        },
       ],
     },
     {
@@ -36,6 +44,10 @@ export const manifest: AssetsManifest = {
         {
           alias: "magic-words",
           src: "assets/magic-words.mp3",
+        },
+        {
+          alias: "typing",
+          src: "assets/typing.mp3",
         },
       ],
     },
@@ -51,6 +63,10 @@ export const manifest: AssetsManifest = {
         {
           alias: "phoenix-flame",
           src: "assets/phoenix-flame.mp3",
+        },
+        {
+          alias: "fire-crackling",
+          src: "assets/fire-crackling.mp3",
         },
       ],
     },

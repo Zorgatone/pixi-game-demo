@@ -230,7 +230,7 @@ async function bootstrap(): Promise<void> {
   const updateMuteButtonState = (): void => {
     muteButton.visible = hasEnteredGame;
     muteButton.setEnabled(true);
-    muteButton.setLabel(audioManager.isMuted ? "Enable Music" : "Mute Music");
+    muteButton.setLabel(audioManager.isMuted ? "Enable Sounds" : "Mute Sounds");
   };
 
   const toggleFullscreen = async (): Promise<void> => {
@@ -337,6 +337,7 @@ async function bootstrap(): Promise<void> {
     width: INTRO_BUTTON_WIDTH,
     height: INTRO_BUTTON_HEIGHT,
     fontSize: INTRO_BUTTON_FONT_SIZE,
+    playClickSound: false,
     onClick: () => {
       if (isLoading || hasEnteredGame || isEnteringDemo) {
         return;
