@@ -21,6 +21,7 @@ import { Scene, type SceneContext } from "../core/Scene";
 import { UIButton } from "../ui/UIButton";
 import { getSafeAreaInsetPx } from "../utils/safeArea";
 
+import { CardHighlightController } from "./aceOfShadows/CardHighlightController";
 import { CardStack } from "./aceOfShadows/CardStack";
 
 interface AceSceneCallbacks {
@@ -82,6 +83,7 @@ export class AceOfShadowsScene extends Scene {
   private readonly _stackLayer = new Container();
   private readonly _flyingLayer = new Container();
   private readonly _stacks: CardStack[] = [];
+  private readonly _cardHighlightController = new CardHighlightController();
 
   private readonly _activeAnimations = new Set<MovingCardAnimation>();
 
@@ -251,11 +253,14 @@ export class AceOfShadowsScene extends Scene {
 
   private _createStacks(): void {
     for (let i = 0; i < STACK_COUNT; i += 1) {
-      const stack = new CardStack({
-        cardWidth: CARD_WIDTH,
-        cardHeight: CARD_HEIGHT,
-        cardOffsetY: CARD_STACK_OFFSET_Y,
-      });
+      const stack = new CardStack(
+        {
+          cardWidth: CARD_WIDTH,
+          cardHeight: CARD_HEIGHT,
+          cardOffsetY: CARD_STACK_OFFSET_Y,
+        },
+        this._cardHighlightController,
+      );
       this._stacks.push(stack);
       this._stackLayer.addChild(stack);
     }
