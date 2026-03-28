@@ -15,6 +15,9 @@ export interface LoadingOverlayOptions {
   labelFontSize?: number;
 }
 
+/**
+ * Simple blocking overlay used while scene bundles are loading.
+ */
 export class LoadingOverlay extends Container {
   private readonly _dim: Graphics;
   private readonly _panel: Container;

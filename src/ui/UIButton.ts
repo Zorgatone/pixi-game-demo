@@ -22,6 +22,9 @@ export interface UIButtonOptions {
   onClick: () => void;
 }
 
+/**
+ * Shared Pixi button component used by menus, overlays, and scene controls.
+ */
 export class UIButton extends Container {
   private readonly _bg: Graphics;
   private readonly _text: Text;
@@ -74,7 +77,7 @@ export class UIButton extends Container {
         return;
       }
 
-      this._bg.tint = HOVER_FILL;
+      this._drawBackground(HOVER_FILL);
     });
 
     this.on("pointerout", () => {
@@ -130,22 +133,16 @@ export class UIButton extends Container {
   }
 
   private _applyVisualState(): void {
-    this._bg.tint = this._isEnabled ? 0xffffff : DISABLED_FILL / NORMAL_FILL;
+    this._drawBackground(this._isEnabled ? NORMAL_FILL : DISABLED_FILL);
     this._text.style.fill = this._isEnabled
       ? NORMAL_TEXT_FILL
       : DISABLED_TEXT_FILL;
+  }
 
-    if (!this._isEnabled) {
-      this._bg.tint = 0xffffff;
-      this._bg
-        .clear()
-        .roundRect(0, 0, this._width, this._height, DEFAULT_RADIUS)
-        .fill(DISABLED_FILL);
-    } else {
-      this._bg
-        .clear()
-        .roundRect(0, 0, this._width, this._height, DEFAULT_RADIUS)
-        .fill(NORMAL_FILL);
-    }
+  private _drawBackground(fill: number): void {
+    this._bg
+      .clear()
+      .roundRect(0, 0, this._width, this._height, DEFAULT_RADIUS)
+      .fill(fill);
   }
 }

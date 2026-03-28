@@ -1,5 +1,6 @@
 import { Assets } from "pixi.js";
 
+import { AssetAlias } from "../assets/aliases";
 import { BundleName, SceneId } from "./config";
 
 type SoundModule = typeof import("@pixi/sound");
@@ -10,16 +11,21 @@ type MusicSceneId =
   | SceneId.AceOfShadows
   | SceneId.MagicWords
   | SceneId.PhoenixFlame;
-type OneShotSoundEffectAlias = "click" | "card-flip";
-type LoopedSoundEffectAlias = "typing" | "fire-crackling";
+type MusicTrackAlias =
+  | AssetAlias.MainMenuMusic
+  | AssetAlias.AceOfShadowsMusic
+  | AssetAlias.MagicWordsMusic
+  | AssetAlias.PhoenixFlameMusic;
+type OneShotSoundEffectAlias = AssetAlias.Click | AssetAlias.CardFlip;
+type LoopedSoundEffectAlias = AssetAlias.Typing | AssetAlias.FireCrackling;
 
 interface MusicTrackConfig {
-  alias: MusicSceneId;
+  alias: MusicTrackAlias;
   bundle: BundleName;
   volume: number;
 }
 
-const UI_CLICK_SOUND_ALIAS = "click";
+const UI_CLICK_SOUND_ALIAS = AssetAlias.Click;
 const UI_CLICK_VOLUME = 0.32;
 const MUSIC_CROSSFADE_MS = 350;
 
@@ -27,11 +33,11 @@ const ONE_SHOT_SOUND_EFFECTS: Record<
   OneShotSoundEffectAlias,
   { bundle: BundleName; volume: number }
 > = {
-  click: {
+  [AssetAlias.Click]: {
     bundle: BundleName.MainMenu,
     volume: UI_CLICK_VOLUME,
   },
-  "card-flip": {
+  [AssetAlias.CardFlip]: {
     bundle: BundleName.AceOfShadows,
     volume: 0.45,
   },
@@ -41,11 +47,11 @@ const LOOPED_SOUND_EFFECTS: Record<
   LoopedSoundEffectAlias,
   { bundle: BundleName; volume: number }
 > = {
-  typing: {
+  [AssetAlias.Typing]: {
     bundle: BundleName.MagicWords,
     volume: 0.23,
   },
-  "fire-crackling": {
+  [AssetAlias.FireCrackling]: {
     bundle: BundleName.PhoenixFlame,
     volume: 0.45,
   },
@@ -53,41 +59,52 @@ const LOOPED_SOUND_EFFECTS: Record<
 
 const MUSIC_TRACKS: Record<MusicSceneId, MusicTrackConfig> = {
   [SceneId.MainMenu]: {
-    alias: SceneId.MainMenu,
+    alias: AssetAlias.MainMenuMusic,
     bundle: BundleName.MainMenu,
     volume: 0.45,
   },
   [SceneId.AceOfShadows]: {
-    alias: SceneId.AceOfShadows,
+    alias: AssetAlias.AceOfShadowsMusic,
     bundle: BundleName.AceOfShadows,
     volume: 0.45,
   },
   [SceneId.MagicWords]: {
-    alias: SceneId.MagicWords,
+    alias: AssetAlias.MagicWordsMusic,
     bundle: BundleName.MagicWords,
     volume: 0.45,
   },
   [SceneId.PhoenixFlame]: {
-    alias: SceneId.PhoenixFlame,
+    alias: AssetAlias.PhoenixFlameMusic,
     bundle: BundleName.PhoenixFlame,
     volume: 0.45,
   },
 };
 
+/**
+ * Centralized audio service for the demo.
+ *
+ * It lazy-loads sound assets, crossfades music between scenes, preserves the
+ * user's mute preference, and rebuilds looped effects after mute/unmute.
+ */
 export class AudioManager {
   private static _globalInstance: AudioManager | null = null;
 
   private _soundModulePromise: Promise<SoundModule> | null = null;
   private readonly _loadedBundles = new Set<BundleName>();
+  // Track desired looped SFX separately from active instances so we can restore
+  // them after a mute/unmute cycle.
   private readonly _requestedLoopedEffects = new Set<LoopedSoundEffectAlias>();
   private readonly _activeLoopedEffectInstances = new Map<
     LoopedSoundEffectAlias,
     SoundInstance
   >();
 
+  // Remember the latest requested music target so unmute can resume the correct track.
   private _requestedTrackId: MusicSceneId | null = null;
   private _currentTrackId: MusicSceneId | null = null;
   private _currentInstance: SoundInstance | null = null;
+
+  // Invalidates older async transitions when the user changes scenes quickly.
   private _transitionToken = 0;
   private _isMuted: boolean;
   private _isPausedByDocumentHidden = false;
@@ -126,6 +143,10 @@ export class AudioManager {
     return this._isMuted;
   }
 
+  /**
+   * Starts the requested music track, crossfading away from the previous track
+   * when needed.
+   */
   public async playMusicForScene(sceneId: MusicSceneId): Promise<void> {
     this._requestedTrackId = sceneId;
 
@@ -137,6 +158,7 @@ export class AudioManager {
       return;
     }
 
+    // Asset loads and user actions can overlap; only the latest request should win.
     const transitionToken = ++this._transitionToken;
     const soundModule = await this._getSoundModule();
     const track = MUSIC_TRACKS[sceneId];
@@ -202,6 +224,8 @@ export class AudioManager {
       return;
     }
 
+    // Rebuild audio from the last requested state instead of assuming nothing changed
+    // while the demo was muted.
     if (this._requestedTrackId) {
       await this.playMusicForScene(this._requestedTrackId);
     }
@@ -290,6 +314,8 @@ export class AudioManager {
   private async _getSoundModule(): Promise<SoundModule> {
     if (!this._soundModulePromise) {
       this._soundModulePromise = import("@pixi/sound").then((soundModule) => {
+        // The game already handles tab visibility manually, so browser auto-pause
+        // would fight with our own resume logic.
         soundModule.sound.disableAutoPause = true;
         return soundModule;
       });
@@ -339,6 +365,7 @@ export class AudioManager {
       const startedAt = performance.now();
 
       const step = (now: number): void => {
+        // requestAnimationFrame keeps the fade in sync with the render loop.
         const progress = Math.min(1, (now - startedAt) / durationMs);
         instance.volume = startVolume + (targetVolume - startVolume) * progress;
 

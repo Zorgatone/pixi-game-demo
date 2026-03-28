@@ -1,8 +1,16 @@
 import { Container, Text, TextStyle } from "pixi.js";
 
-import { MOBILE_BREAKPOINT, MOBILE_UI_SCALE, SceneId } from "../app/config";
+import {
+  DEMO_TITLE,
+  MOBILE_BREAKPOINT,
+  MOBILE_UI_SCALE,
+  SceneId,
+  type PlayableSceneId,
+} from "../app/config";
 import { Scene } from "../core/Scene";
 import { UIButton } from "../ui/UIButton";
+
+import { MAIN_MENU_ITEMS } from "./sceneCatalog";
 
 const MENU_TEXT_FILL = 0xffffff;
 
@@ -13,26 +21,13 @@ const BUTTON_HEIGHT = 64;
 const BUTTON_SPACING = 90;
 const BUTTON_FONT_SIZE = 22;
 
-export type MenuSceneId =
-  | SceneId.AceOfShadows
-  | SceneId.MagicWords
-  | SceneId.PhoenixFlame;
-
-interface MenuItem {
-  id: MenuSceneId;
-  label: string;
-}
-
-const MENU_ITEMS = [
-  { id: SceneId.AceOfShadows, label: "Ace of Shadows" },
-  { id: SceneId.MagicWords, label: "Magic Words" },
-  { id: SceneId.PhoenixFlame, label: "Phoenix Flame" },
-] as const satisfies MenuItem[];
-
 type MenuCallbacks = {
-  onSelect: (sceneId: MenuSceneId) => void;
+  onSelect: (sceneId: PlayableSceneId) => void;
 };
 
+/**
+ * Small scene that lists the playable showcases and hands selection back to the shell.
+ */
 export class MainMenuScene extends Scene {
   public readonly id = SceneId.MainMenu;
 
@@ -44,7 +39,7 @@ export class MainMenuScene extends Scene {
     super();
 
     this._title = new Text({
-      text: "PIXI 8 Game Demo",
+      text: DEMO_TITLE,
       style: new TextStyle({
         fill: MENU_TEXT_FILL,
         fontSize: TITLE_FONT_SIZE,
@@ -54,7 +49,7 @@ export class MainMenuScene extends Scene {
 
     this._title.anchor.set(0.5, 0);
 
-    this._buttonInstances = MENU_ITEMS.map(
+    this._buttonInstances = MAIN_MENU_ITEMS.map(
       ({ id, label }) =>
         new UIButton({
           label,
