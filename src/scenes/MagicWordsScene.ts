@@ -63,6 +63,7 @@ interface RichTokenEmoji {
 
 type RichToken = RichTokenText | RichTokenEmoji;
 type SceneStatus = "idle" | "loading" | "ready" | "error";
+type SpeakerSide = "left" | "right";
 
 const LABEL_FONT_SIZE = 36;
 
@@ -79,12 +80,16 @@ const MESSAGE_FONT_SIZE = 28;
 const PROMPT_FONT_SIZE = 20;
 
 const DIALOGUE_PANEL_RADIUS = 26;
-const DIALOGUE_PANEL_HEIGHT_RATIO = 0.34;
+const DIALOGUE_PANEL_TOP_ANCHOR_HEIGHT_RATIO = 0.34;
+const DIALOGUE_PANEL_HEIGHT_RATIO = 0.28;
 const DIALOGUE_PANEL_SIDE_MARGIN = 28;
 const DIALOGUE_PANEL_BOTTOM_MARGIN = 26;
 const DIALOGUE_PANEL_TOP_PADDING = 18;
 const DIALOGUE_PANEL_SIDE_PADDING = 24;
 const DIALOGUE_PANEL_BOTTOM_PADDING = 18;
+const DIALOGUE_TAIL_BASE_WIDTH = 48;
+const DIALOGUE_TAIL_HEIGHT = 28;
+const DIALOGUE_TAIL_SIDE_INSET = 78;
 
 const AVATAR_SIZE = 220;
 const AVATAR_MOBILE_SIZE = 128;
@@ -317,6 +322,11 @@ export class MagicWordsScene extends Scene {
   private _viewportHeight = 0;
   private _uiScale = 1;
   private _isMobile = false;
+  private _panelX = 0;
+  private _panelY = 0;
+  private _panelWidth = 0;
+  private _panelHeight = 0;
+  private _speakerSide: SpeakerSide = "left";
 
   private _dialogueIndex = 0;
   private _currentTokens: RichToken[] = [];
@@ -419,32 +429,23 @@ export class MagicWordsScene extends Scene {
       -height * 0.5 + BACK_BUTTON_MARGIN_Y + safeAreaTop,
     );
 
-    const panelHeight = height * DIALOGUE_PANEL_HEIGHT_RATIO;
-    const panelWidth =
+    const panelTopAnchorHeight =
+      height * DIALOGUE_PANEL_TOP_ANCHOR_HEIGHT_RATIO;
+    this._panelHeight = height * DIALOGUE_PANEL_HEIGHT_RATIO;
+    this._panelWidth =
       width - DIALOGUE_PANEL_SIDE_MARGIN * 2 - safeAreaLeft - safeAreaRight;
-    const panelX = -width * 0.5 + DIALOGUE_PANEL_SIDE_MARGIN + safeAreaLeft;
-    const panelY =
+    this._panelX = -width * 0.5 + DIALOGUE_PANEL_SIDE_MARGIN + safeAreaLeft;
+    this._panelY =
       height * 0.5 -
-      panelHeight -
+      panelTopAnchorHeight -
       DIALOGUE_PANEL_BOTTOM_MARGIN -
       safeAreaBottom;
 
-    this._dialoguePanel
-      .clear()
-      .roundRect(panelX, panelY, panelWidth, panelHeight, DIALOGUE_PANEL_RADIUS)
-      .fill(PANEL_BG)
-      .stroke({ color: PANEL_STROKE, width: 2 });
-
     this._speakerNameText.style.fontSize = NAME_FONT_SIZE * this._uiScale;
-    this._speakerNameText.position.set(
-      panelX + DIALOGUE_PANEL_SIDE_PADDING,
-      panelY + DIALOGUE_PANEL_TOP_PADDING,
-    );
-
     this._promptText.style.fontSize = PROMPT_FONT_SIZE * this._uiScale;
 
     this._statusText.style.fontSize = STATUS_FONT_SIZE * this._uiScale;
-    this._statusText.style.wordWrapWidth = panelWidth;
+    this._statusText.style.wordWrapWidth = this._panelWidth;
     this._statusText.position.set(0, 0);
 
     const avatarSize = this._isMobile ? AVATAR_MOBILE_SIZE : AVATAR_SIZE;
@@ -452,7 +453,7 @@ export class MagicWordsScene extends Scene {
       -width * 0.5 + AVATAR_SIDE_MARGIN + safeAreaLeft + avatarSize * 0.5;
     const rightAvatarX =
       width * 0.5 - AVATAR_SIDE_MARGIN - safeAreaRight - avatarSize * 0.5;
-    const avatarY = panelY - AVATAR_BOTTOM_OFFSET;
+    const avatarY = this._panelY - AVATAR_BOTTOM_OFFSET;
 
     this._leftAvatarSprite.position.set(leftAvatarX, avatarY);
     this._rightAvatarSprite.position.set(rightAvatarX, avatarY);
@@ -470,6 +471,8 @@ export class MagicWordsScene extends Scene {
       this._refreshCurrentDialogueVisuals();
       this._rebuildMessageContent();
     } else {
+      this._drawDialoguePanel(this._speakerSide);
+      this._layoutSpeakerName();
       this._updateStatusText();
     }
   }
@@ -684,25 +687,30 @@ export class MagicWordsScene extends Scene {
 
     this._leftAvatarSprite.visible = false;
     this._rightAvatarSprite.visible = false;
+    this._speakerSide = "left";
 
     if (avatar) {
       if (avatar.position === "right") {
+        this._speakerSide = "right";
         this._rightAvatarSprite.texture = avatar.texture;
         this._rightAvatarSprite.visible = true;
       } else {
+        this._speakerSide = "left";
         this._leftAvatarSprite.texture = avatar.texture;
         this._leftAvatarSprite.visible = true;
       }
     }
+
+    this._drawDialoguePanel(this._speakerSide);
+    this._layoutSpeakerName();
   }
 
   private _rebuildMessageContent(): void {
     this._messageRoot.removeChildren();
 
-    const panelBounds = this._dialoguePanel.getLocalBounds();
     const messageFontSize = MESSAGE_FONT_SIZE * this._uiScale;
     const emojiSize = EMOJI_SIZE * this._uiScale;
-    const maxTextWidth = panelBounds.width - DIALOGUE_PANEL_SIDE_PADDING * 2;
+    const maxTextWidth = this._panelWidth - DIALOGUE_PANEL_SIDE_PADDING * 2;
 
     const content = this._createVisibleRichText(
       this._currentTokens,
@@ -713,24 +721,70 @@ export class MagicWordsScene extends Scene {
     );
 
     const messageY =
-      panelBounds.y +
+      this._panelY +
       DIALOGUE_PANEL_TOP_PADDING +
       this._speakerNameText.height +
       12;
 
-    content.position.set(panelBounds.x + DIALOGUE_PANEL_SIDE_PADDING, messageY);
+    content.position.set(this._panelX + DIALOGUE_PANEL_SIDE_PADDING, messageY);
 
     this._messageRoot.addChild(content);
 
     this._promptText.position.set(
-      panelBounds.x +
-        panelBounds.width -
+      this._panelX +
+        this._panelWidth -
         this._promptText.width -
         DIALOGUE_PANEL_SIDE_PADDING,
-      panelBounds.y +
-        panelBounds.height -
+      this._panelY +
+        this._panelHeight -
         this._promptText.height -
         DIALOGUE_PANEL_BOTTOM_PADDING,
+    );
+  }
+
+  private _drawDialoguePanel(speakerSide: SpeakerSide): void {
+    const tailBaseWidth = DIALOGUE_TAIL_BASE_WIDTH * this._uiScale;
+    const tailHeight = DIALOGUE_TAIL_HEIGHT * this._uiScale;
+    const tailHalfWidth = tailBaseWidth * 0.5;
+    const tailCenterX =
+      speakerSide === "right"
+        ? this._panelX +
+          this._panelWidth -
+          DIALOGUE_TAIL_SIDE_INSET * this._uiScale
+        : this._panelX + DIALOGUE_TAIL_SIDE_INSET * this._uiScale;
+
+    this._dialoguePanel
+      .clear()
+      .roundRect(
+        this._panelX,
+        this._panelY,
+        this._panelWidth,
+        this._panelHeight,
+        DIALOGUE_PANEL_RADIUS,
+      )
+      .fill(PANEL_BG)
+      .stroke({ color: PANEL_STROKE, width: 2 })
+      .poly([
+        tailCenterX - tailHalfWidth,
+        this._panelY,
+        tailCenterX + tailHalfWidth,
+        this._panelY,
+        tailCenterX,
+        this._panelY - tailHeight,
+      ])
+      .fill(PANEL_BG)
+      .stroke({ color: PANEL_STROKE, width: 2 });
+  }
+
+  private _layoutSpeakerName(): void {
+    this._speakerNameText.style.align =
+      this._speakerSide === "right" ? "right" : "left";
+    this._speakerNameText.anchor.set(this._speakerSide === "right" ? 1 : 0, 0);
+    this._speakerNameText.position.set(
+      this._speakerSide === "right"
+        ? this._panelX + this._panelWidth - DIALOGUE_PANEL_SIDE_PADDING
+        : this._panelX + DIALOGUE_PANEL_SIDE_PADDING,
+      this._panelY + DIALOGUE_PANEL_TOP_PADDING,
     );
   }
 

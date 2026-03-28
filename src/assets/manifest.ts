@@ -9,17 +9,35 @@ export const manifest: AssetsManifest = {
       assets: [],
     },
     {
+      name: BundleName.MainMenu,
+      assets: [
+        {
+          alias: "main-menu",
+          src: "assets/main-menu.mp3",
+        },
+      ],
+    },
+    {
       name: BundleName.AceOfShadows,
       assets: [
         {
           alias: "card",
           src: "assets/card.png",
         },
+        {
+          alias: "ace-of-shadows",
+          src: "assets/ace-of-shadows.mp3",
+        },
       ],
     },
     {
       name: BundleName.MagicWords,
-      assets: [],
+      assets: [
+        {
+          alias: "magic-words",
+          src: "assets/magic-words.mp3",
+        },
+      ],
     },
     {
       name: BundleName.PhoenixFlame,
@@ -30,6 +48,10 @@ export const manifest: AssetsManifest = {
         { alias: "flame_small", src: "assets/flame_small.png" },
         { alias: "halo", src: "assets/halo.png" },
         { alias: "spark", src: "assets/spark.png" },
+        {
+          alias: "phoenix-flame",
+          src: "assets/phoenix-flame.mp3",
+        },
       ],
     },
   ],
