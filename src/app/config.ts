@@ -15,6 +15,7 @@ export const enum SceneId {
 
 export const enum BundleName {
   Shared = "shared",
+  MainMenu = SceneId.MainMenu,
   AceOfShadows = SceneId.AceOfShadows,
   MagicWords = SceneId.MagicWords,
   PhoenixFlame = SceneId.PhoenixFlame,
