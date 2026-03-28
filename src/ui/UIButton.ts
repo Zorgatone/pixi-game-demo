@@ -1,5 +1,7 @@
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 
+import { playGlobalUiClickSound } from "../app/AudioManager";
+
 const DEFAULT_WIDTH = 220;
 const DEFAULT_HEIGHT = 56;
 const DEFAULT_RADIUS = 14;
@@ -16,6 +18,7 @@ export interface UIButtonOptions {
   width?: number;
   height?: number;
   fontSize?: number;
+  playClickSound?: boolean;
   onClick: () => void;
 }
 
@@ -27,6 +30,7 @@ export class UIButton extends Container {
   private _height: number;
   private _fontSize: number;
   private _isEnabled = true;
+  private readonly _playClickSound: boolean;
   private readonly _onClick: () => void;
 
   public constructor(options: UIButtonOptions) {
@@ -35,6 +39,7 @@ export class UIButton extends Container {
     this._width = options.width ?? DEFAULT_WIDTH;
     this._height = options.height ?? DEFAULT_HEIGHT;
     this._fontSize = options.fontSize ?? DEFAULT_FONT_SIZE;
+    this._playClickSound = options.playClickSound ?? true;
     this._onClick = options.onClick;
 
     this._bg = new Graphics();
@@ -55,6 +60,10 @@ export class UIButton extends Container {
     this.on("pointertap", () => {
       if (!this._isEnabled) {
         return;
+      }
+
+      if (this._playClickSound) {
+        playGlobalUiClickSound();
       }
 
       this._onClick();

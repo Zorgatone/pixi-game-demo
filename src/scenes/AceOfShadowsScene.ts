@@ -8,6 +8,7 @@ import {
   Texture,
 } from "pixi.js";
 import gsap from "gsap";
+import { playGlobalSoundEffect } from "../app/AudioManager";
 
 import {
   SceneId,
@@ -414,6 +415,8 @@ export class AceOfShadowsScene extends Scene {
       slotIndex,
       this.root,
     );
+
+    playGlobalSoundEffect("card-flip");
 
     card.rotation = 0;
     card.zIndex = 10_000;

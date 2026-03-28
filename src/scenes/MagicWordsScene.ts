@@ -15,6 +15,11 @@ import {
   MOBILE_BREAKPOINT,
   DIALOGUE_ENDPOINT,
 } from "../app/config";
+import {
+  playGlobalUiClickSound,
+  startGlobalLoopedSoundEffect,
+  stopGlobalLoopedSoundEffect,
+} from "../app/AudioManager";
 
 import { Scene, type SceneContext } from "../core/Scene";
 import { UIButton } from "../ui/UIButton";
@@ -333,6 +338,7 @@ export class MagicWordsScene extends Scene {
   private _visibleCharacterCount = 0;
   private _typewriterAccumulator = 0;
   private _currentDialogueDone = false;
+  private _isTypingSoundActive = false;
 
   public constructor(private readonly _callbacks: MagicWordsSceneCallbacks) {
     super();
@@ -495,6 +501,11 @@ export class MagicWordsScene extends Scene {
       );
 
       if (charsToReveal > 0) {
+        if (!this._isTypingSoundActive) {
+          this._isTypingSoundActive = true;
+          startGlobalLoopedSoundEffect("typing");
+        }
+
         this._typewriterAccumulator -=
           charsToReveal / TYPEWRITER_CHARS_PER_SECOND;
 
@@ -508,6 +519,7 @@ export class MagicWordsScene extends Scene {
 
         if (this._visibleCharacterCount >= maxCharacters) {
           this._currentDialogueDone = true;
+          this._stopTypingSound();
         }
 
         this._rebuildMessageContent();
@@ -672,9 +684,14 @@ export class MagicWordsScene extends Scene {
     this._visibleCharacterCount = 0;
     this._typewriterAccumulator = 0;
     this._currentDialogueDone = false;
+    this._stopTypingSound();
 
     this._refreshCurrentDialogueVisuals();
     this._rebuildMessageContent();
+  }
+
+  public override onExit(): void {
+    this._stopTypingSound();
   }
 
   private _refreshCurrentDialogueVisuals(): void {
@@ -746,6 +763,8 @@ export class MagicWordsScene extends Scene {
     const tailBaseWidth = DIALOGUE_TAIL_BASE_WIDTH * this._uiScale;
     const tailHeight = DIALOGUE_TAIL_HEIGHT * this._uiScale;
     const tailHalfWidth = tailBaseWidth * 0.5;
+    const seamCoverHeight = 4;
+    const seamCoverWidth = tailBaseWidth + 6;
     const tailCenterX =
       speakerSide === "right"
         ? this._panelX +
@@ -773,6 +792,16 @@ export class MagicWordsScene extends Scene {
         this._panelY - tailHeight,
       ])
       .fill(PANEL_BG)
+      .rect(
+        tailCenterX - seamCoverWidth * 0.5,
+        this._panelY - seamCoverHeight * 0.5,
+        seamCoverWidth,
+        seamCoverHeight,
+      )
+      .fill(PANEL_BG)
+      .moveTo(tailCenterX - tailHalfWidth, this._panelY)
+      .lineTo(tailCenterX, this._panelY - tailHeight)
+      .lineTo(tailCenterX + tailHalfWidth, this._panelY)
       .stroke({ color: PANEL_STROKE, width: 2 });
   }
 
@@ -902,11 +931,14 @@ export class MagicWordsScene extends Scene {
       return;
     }
 
+    playGlobalUiClickSound();
+
     const totalCharacters = countVisibleCharacters(this._currentTokens);
 
     if (!this._currentDialogueDone) {
       this._visibleCharacterCount = totalCharacters;
       this._currentDialogueDone = true;
+      this._stopTypingSound();
       this._rebuildMessageContent();
       return;
     }
@@ -919,5 +951,14 @@ export class MagicWordsScene extends Scene {
 
     this._dialogueIndex += 1;
     this._setupDialogueAtCurrentIndex();
+  }
+
+  private _stopTypingSound(): void {
+    if (!this._isTypingSoundActive) {
+      return;
+    }
+
+    this._isTypingSoundActive = false;
+    stopGlobalLoopedSoundEffect("typing");
   }
 }

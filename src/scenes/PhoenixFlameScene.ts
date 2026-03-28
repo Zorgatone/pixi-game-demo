@@ -7,6 +7,10 @@ import {
   TextStyle,
   Texture,
 } from "pixi.js";
+import {
+  startGlobalLoopedSoundEffect,
+  stopGlobalLoopedSoundEffect,
+} from "../app/AudioManager";
 
 import {
   SceneId,
@@ -291,6 +295,14 @@ export class PhoenixFlameScene extends Scene {
     this._effectRoot.position.set(0, 20);
 
     this._applyEffectLayout();
+  }
+
+  public override onEnter(): void {
+    startGlobalLoopedSoundEffect("fire-crackling");
+  }
+
+  public override onExit(): void {
+    stopGlobalLoopedSoundEffect("fire-crackling");
   }
 
   public override update(context: SceneContext): void {

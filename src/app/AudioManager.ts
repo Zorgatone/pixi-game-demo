@@ -10,6 +10,8 @@ type MusicSceneId =
   | SceneId.AceOfShadows
   | SceneId.MagicWords
   | SceneId.PhoenixFlame;
+type OneShotSoundEffectAlias = "click" | "card-flip";
+type LoopedSoundEffectAlias = "typing" | "fire-crackling";
 
 interface MusicTrackConfig {
   alias: MusicSceneId;
@@ -17,7 +19,37 @@ interface MusicTrackConfig {
   volume: number;
 }
 
+const UI_CLICK_SOUND_ALIAS = "click";
+const UI_CLICK_VOLUME = 0.32;
 const MUSIC_CROSSFADE_MS = 350;
+
+const ONE_SHOT_SOUND_EFFECTS: Record<
+  OneShotSoundEffectAlias,
+  { bundle: BundleName; volume: number }
+> = {
+  click: {
+    bundle: BundleName.MainMenu,
+    volume: UI_CLICK_VOLUME,
+  },
+  "card-flip": {
+    bundle: BundleName.AceOfShadows,
+    volume: 0.45,
+  },
+};
+
+const LOOPED_SOUND_EFFECTS: Record<
+  LoopedSoundEffectAlias,
+  { bundle: BundleName; volume: number }
+> = {
+  typing: {
+    bundle: BundleName.MagicWords,
+    volume: 0.23,
+  },
+  "fire-crackling": {
+    bundle: BundleName.PhoenixFlame,
+    volume: 0.45,
+  },
+};
 
 const MUSIC_TRACKS: Record<MusicSceneId, MusicTrackConfig> = {
   [SceneId.MainMenu]: {
@@ -43,8 +75,15 @@ const MUSIC_TRACKS: Record<MusicSceneId, MusicTrackConfig> = {
 };
 
 export class AudioManager {
+  private static _globalInstance: AudioManager | null = null;
+
   private _soundModulePromise: Promise<SoundModule> | null = null;
   private readonly _loadedBundles = new Set<BundleName>();
+  private readonly _requestedLoopedEffects = new Set<LoopedSoundEffectAlias>();
+  private readonly _activeLoopedEffectInstances = new Map<
+    LoopedSoundEffectAlias,
+    SoundInstance
+  >();
 
   private _requestedTrackId: MusicSceneId | null = null;
   private _currentTrackId: MusicSceneId | null = null;
@@ -75,7 +114,12 @@ export class AudioManager {
 
   public constructor(isMuted = false) {
     this._isMuted = isMuted;
+    AudioManager._globalInstance = this;
     document.addEventListener("visibilitychange", this._handleVisibilityChange);
+  }
+
+  public static getGlobalInstance(): AudioManager | null {
+    return AudioManager._globalInstance;
   }
 
   public get isMuted(): boolean {
@@ -149,6 +193,11 @@ export class AudioManager {
       this._currentInstance = null;
       this._currentTrackId = null;
 
+      this._activeLoopedEffectInstances.forEach((instance) => {
+        instance.stop();
+      });
+      this._activeLoopedEffectInstances.clear();
+
       await this._fadeOutAndStop(currentInstance, MUSIC_CROSSFADE_MS);
       return;
     }
@@ -156,6 +205,86 @@ export class AudioManager {
     if (this._requestedTrackId) {
       await this.playMusicForScene(this._requestedTrackId);
     }
+
+    await Promise.all(
+      Array.from(this._requestedLoopedEffects).map(async (alias) => {
+        await this.startLoopedSoundEffect(alias);
+      }),
+    );
+  }
+
+  public async playUiClick(): Promise<void> {
+    await this.playSoundEffect(UI_CLICK_SOUND_ALIAS);
+  }
+
+  public async playSoundEffect(alias: OneShotSoundEffectAlias): Promise<void> {
+    if (this._isMuted) {
+      return;
+    }
+
+    const soundModule = await this._getSoundModule();
+    const config = ONE_SHOT_SOUND_EFFECTS[alias];
+
+    await this._resumeAudioContext(soundModule);
+    await this._ensureBundleLoaded(config.bundle);
+
+    await soundModule.sound.play(alias, {
+      volume: config.volume,
+    });
+  }
+
+  public async startLoopedSoundEffect(
+    alias: LoopedSoundEffectAlias,
+  ): Promise<void> {
+    this._requestedLoopedEffects.add(alias);
+
+    if (this._isMuted || this._activeLoopedEffectInstances.has(alias)) {
+      return;
+    }
+
+    const soundModule = await this._getSoundModule();
+    const config = LOOPED_SOUND_EFFECTS[alias];
+
+    await this._resumeAudioContext(soundModule);
+    await this._ensureBundleLoaded(config.bundle);
+
+    const instance = await soundModule.sound.play(alias, {
+      loop: true,
+      singleInstance: true,
+      volume: config.volume,
+    });
+
+    if (this._isMuted) {
+      instance.stop();
+      return;
+    }
+
+    this._activeLoopedEffectInstances.set(alias, instance);
+
+    instance.on("stop", () => {
+      if (this._activeLoopedEffectInstances.get(alias) === instance) {
+        this._activeLoopedEffectInstances.delete(alias);
+      }
+    });
+
+    instance.on("end", () => {
+      if (this._activeLoopedEffectInstances.get(alias) === instance) {
+        this._activeLoopedEffectInstances.delete(alias);
+      }
+    });
+  }
+
+  public stopLoopedSoundEffect(alias: LoopedSoundEffectAlias): void {
+    this._requestedLoopedEffects.delete(alias);
+
+    const instance = this._activeLoopedEffectInstances.get(alias);
+
+    if (!instance) {
+      return;
+    }
+
+    this._activeLoopedEffectInstances.delete(alias);
+    instance.stop();
   }
 
   private async _getSoundModule(): Promise<SoundModule> {
@@ -225,4 +354,42 @@ export class AudioManager {
       requestAnimationFrame(step);
     });
   }
+}
+
+export function playGlobalUiClickSound(): void {
+  const audioManager = AudioManager.getGlobalInstance();
+
+  if (!audioManager) {
+    return;
+  }
+
+  void audioManager.playUiClick();
+}
+
+export function playGlobalSoundEffect(alias: OneShotSoundEffectAlias): void {
+  const audioManager = AudioManager.getGlobalInstance();
+
+  if (!audioManager) {
+    return;
+  }
+
+  void audioManager.playSoundEffect(alias);
+}
+
+export function startGlobalLoopedSoundEffect(
+  alias: LoopedSoundEffectAlias,
+): void {
+  const audioManager = AudioManager.getGlobalInstance();
+
+  if (!audioManager) {
+    return;
+  }
+
+  void audioManager.startLoopedSoundEffect(alias);
+}
+
+export function stopGlobalLoopedSoundEffect(
+  alias: LoopedSoundEffectAlias,
+): void {
+  AudioManager.getGlobalInstance()?.stopLoopedSoundEffect(alias);
 }
