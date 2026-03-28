@@ -1,5 +1,6 @@
 import { Assets, Container, Graphics, Text, TextStyle } from "pixi.js";
 
+import { AudioManager } from "./app/AudioManager";
 import {
   MOBILE_BREAKPOINT,
   MOBILE_UI_SCALE,
@@ -20,11 +21,12 @@ import { UIButton } from "./ui/UIButton";
 import "./styles/index.css";
 import { getSafeAreaInsetPx } from "./utils/safeArea";
 
-const MAIN_MENU_MUSIC_ALIAS = "main-menu";
-const MAIN_MENU_MUSIC_VOLUME = 0.45;
+const MUSIC_COOKIE_NAME = "pixi-game-demo-music-enabled";
+const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
 const FULLSCREEN_BUTTON_MARGIN_X = 20;
 const FULLSCREEN_BUTTON_MARGIN_Y = 40;
+const MUTE_BUTTON_MARGIN_Y = 28;
 const FULLSCREEN_BUTTON_WIDTH = 220;
 const FULLSCREEN_BUTTON_HEIGHT = 56;
 const FULLSCREEN_BUTTON_FONT_SIZE = 22;
@@ -59,6 +61,31 @@ function isFullscreenSupported(): boolean {
   );
 }
 
+function readMusicEnabledCookie(): boolean {
+  const cookiePrefix = `${MUSIC_COOKIE_NAME}=`;
+
+  for (const cookie of document.cookie.split(";")) {
+    const trimmedCookie = cookie.trim();
+
+    if (!trimmedCookie.startsWith(cookiePrefix)) {
+      continue;
+    }
+
+    return trimmedCookie.slice(cookiePrefix.length) !== "false";
+  }
+
+  return true;
+}
+
+function writeMusicEnabledCookie(isEnabled: boolean): void {
+  document.cookie = [
+    `${MUSIC_COOKIE_NAME}=${String(isEnabled)}`,
+    "path=/",
+    `max-age=${COOKIE_MAX_AGE_SECONDS}`,
+    "SameSite=Lax",
+  ].join("; ");
+}
+
 async function bootstrap(): Promise<void> {
   const app = await createApp();
 
@@ -70,6 +97,7 @@ async function bootstrap(): Promise<void> {
   app.stage.addChild(worldLayer, uiLayer);
 
   const sceneManager = new SceneManager(worldLayer);
+  const audioManager = new AudioManager(!readMusicEnabledCookie());
 
   const fps = new FPSCounter();
   uiLayer.addChild(fps.view);
@@ -80,58 +108,8 @@ async function bootstrap(): Promise<void> {
   let isLoading = false;
   let hasEnteredGame = false;
   let isEnteringDemo = false;
-  let isMainMenuMusicPlaying = false;
-  let menuAudioLoaded = false;
 
   const fullscreenSupported = isFullscreenSupported();
-
-  let soundModulePromise: Promise<typeof import("@pixi/sound")> | null = null;
-
-  const getSoundModule = async (): Promise<typeof import("@pixi/sound")> => {
-    if (!soundModulePromise) {
-      soundModulePromise = import("@pixi/sound");
-    }
-
-    return await soundModulePromise;
-  };
-
-  const ensureMenuAudioReady = async (): Promise<
-    typeof import("@pixi/sound")
-  > => {
-    const soundModule = await getSoundModule();
-
-    await soundModule.sound.context.audioContext.resume();
-
-    if (!menuAudioLoaded) {
-      await Assets.loadBundle(BundleName.MainMenu);
-      menuAudioLoaded = true;
-    }
-
-    return soundModule;
-  };
-
-  const stopMainMenuMusic = async (): Promise<void> => {
-    if (!isMainMenuMusicPlaying) {
-      return;
-    }
-
-    const { sound } = await getSoundModule();
-    sound.stop(MAIN_MENU_MUSIC_ALIAS);
-    isMainMenuMusicPlaying = false;
-  };
-
-  const playMainMenuMusic = async (): Promise<void> => {
-    const { sound } = await ensureMenuAudioReady();
-
-    sound.stop(MAIN_MENU_MUSIC_ALIAS);
-    sound.play(MAIN_MENU_MUSIC_ALIAS, {
-      loop: true,
-      volume: MAIN_MENU_MUSIC_VOLUME,
-      singleInstance: true,
-    });
-
-    isMainMenuMusicPlaying = true;
-  };
 
   const showScene = (scene: Scene): void => {
     sceneManager.changeScene(scene, app.screen.width, app.screen.height);
@@ -156,7 +134,7 @@ async function bootstrap(): Promise<void> {
       return;
     }
 
-    await playMainMenuMusic();
+    await audioManager.playMusicForScene(SceneId.MainMenu);
 
     showScene(
       new MainMenuScene({
@@ -169,12 +147,11 @@ async function bootstrap(): Promise<void> {
           isLoading = true;
 
           try {
-            await stopMainMenuMusic();
-
             if (sceneConfig.bundle) {
               await loadBundleWithOverlay(sceneConfig.bundle);
             }
 
+            await audioManager.playMusicForScene(sceneId);
             showScene(sceneConfig.create());
           } finally {
             isLoading = false;
@@ -250,6 +227,12 @@ async function bootstrap(): Promise<void> {
     );
   };
 
+  const updateMuteButtonState = (): void => {
+    muteButton.visible = hasEnteredGame;
+    muteButton.setEnabled(true);
+    muteButton.setLabel(audioManager.isMuted ? "Enable Music" : "Mute Music");
+  };
+
   const toggleFullscreen = async (): Promise<void> => {
     if (!fullscreenSupported || !hasEnteredGame) {
       return;
@@ -302,6 +285,28 @@ async function bootstrap(): Promise<void> {
   fullscreenButton.visible = false;
   uiLayer.addChild(fullscreenButton);
 
+  const muteButton = new UIButton({
+    label: audioManager.isMuted ? "Enable Music" : "Mute Music",
+    width: FULLSCREEN_BUTTON_WIDTH,
+    height: FULLSCREEN_BUTTON_HEIGHT,
+    fontSize: FULLSCREEN_BUTTON_FONT_SIZE,
+    onClick: () => {
+      if (!hasEnteredGame) {
+        return;
+      }
+
+      void (async () => {
+        const nextIsMuted = !audioManager.isMuted;
+        await audioManager.setMuted(nextIsMuted);
+        writeMusicEnabledCookie(!nextIsMuted);
+        updateMuteButtonState();
+      })();
+    },
+  });
+
+  muteButton.visible = false;
+  uiLayer.addChild(muteButton);
+
   const introOverlay = new Container();
   const introDim = new Graphics();
   const introPanel = new Graphics();
@@ -349,6 +354,7 @@ async function bootstrap(): Promise<void> {
           await openMenu();
           introOverlay.visible = false;
           updateFullscreenButtonState();
+          updateMuteButtonState();
         } catch (error) {
           hasEnteredGame = false;
           console.error("Failed to enter the demo:", error);
@@ -380,6 +386,7 @@ async function bootstrap(): Promise<void> {
 
     const safeAreaTop = getSafeAreaInsetPx("--sat");
     const safeAreaRight = getSafeAreaInsetPx("--sar");
+    const safeAreaBottom = getSafeAreaInsetPx("--sab");
     const safeAreaLeft = getSafeAreaInsetPx("--sal");
 
     const buttonWidth = FULLSCREEN_BUTTON_WIDTH * scale;
@@ -392,6 +399,7 @@ async function bootstrap(): Promise<void> {
 
     const buttonMarginX = FULLSCREEN_BUTTON_MARGIN_X + safeAreaRight;
     const buttonMarginY = FULLSCREEN_BUTTON_MARGIN_Y + safeAreaTop;
+    const bottomButtonMarginY = MUTE_BUTTON_MARGIN_Y + safeAreaBottom;
 
     worldLayer.position.set(width * 0.5, height * 0.5);
 
@@ -399,6 +407,12 @@ async function bootstrap(): Promise<void> {
     fullscreenButton.position.set(
       width - buttonWidth - buttonMarginX,
       buttonMarginY,
+    );
+
+    muteButton.resize(buttonWidth, buttonHeight, buttonFontSize);
+    muteButton.position.set(
+      width - buttonWidth - buttonMarginX,
+      height - buttonHeight - bottomButtonMarginY,
     );
 
     fps.view.style.fontSize = fpsFontSize;
@@ -470,6 +484,7 @@ async function bootstrap(): Promise<void> {
   window.visualViewport?.addEventListener?.("resize", requestRelayoutTwice);
 
   updateFullscreenButtonState();
+  updateMuteButtonState();
 
   let previousTime = performance.now();
   let previousWidth = app.screen.width;
