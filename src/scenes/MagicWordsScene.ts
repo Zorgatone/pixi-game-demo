@@ -746,6 +746,8 @@ export class MagicWordsScene extends Scene {
     const tailBaseWidth = DIALOGUE_TAIL_BASE_WIDTH * this._uiScale;
     const tailHeight = DIALOGUE_TAIL_HEIGHT * this._uiScale;
     const tailHalfWidth = tailBaseWidth * 0.5;
+    const seamCoverHeight = 4;
+    const seamCoverWidth = tailBaseWidth + 6;
     const tailCenterX =
       speakerSide === "right"
         ? this._panelX +
@@ -773,6 +775,16 @@ export class MagicWordsScene extends Scene {
         this._panelY - tailHeight,
       ])
       .fill(PANEL_BG)
+      .rect(
+        tailCenterX - seamCoverWidth * 0.5,
+        this._panelY - seamCoverHeight * 0.5,
+        seamCoverWidth,
+        seamCoverHeight,
+      )
+      .fill(PANEL_BG)
+      .moveTo(tailCenterX - tailHalfWidth, this._panelY)
+      .lineTo(tailCenterX, this._panelY - tailHeight)
+      .lineTo(tailCenterX + tailHalfWidth, this._panelY)
       .stroke({ color: PANEL_STROKE, width: 2 });
   }
 
