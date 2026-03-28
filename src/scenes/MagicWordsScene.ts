@@ -14,15 +14,16 @@ import {
   MOBILE_BREAKPOINT,
   DIALOGUE_ENDPOINT,
 } from "../app/config";
+import { AssetAlias } from "../assets/aliases";
 import {
   playGlobalUiClickSound,
   startGlobalLoopedSoundEffect,
   stopGlobalLoopedSoundEffect,
 } from "../app/AudioManager";
-
 import { Scene, type SceneContext } from "../core/Scene";
 import { UIButton } from "../ui/UIButton";
 import { getSafeAreaInsetPx } from "../utils/safeArea";
+
 import { loadDialogueResources } from "./magicWords/dialogueLoader";
 import {
   countVisibleCharacters,
@@ -121,6 +122,10 @@ function makePromptTextStyle(fontSize: number): TextStyle {
   });
 }
 
+/**
+ * Dialogue scene that fetches remote content, renders avatars plus inline emoji,
+ * and reveals lines with a typewriter effect.
+ */
 export class MagicWordsScene extends Scene {
   public readonly id = SceneId.MagicWords;
 
@@ -133,6 +138,7 @@ export class MagicWordsScene extends Scene {
   private readonly _messageRoot = new Container();
   private readonly _promptText: Text;
   private readonly _statusText: Text;
+  // A transparent full-screen hit area keeps interaction simple on touch devices.
   private readonly _clickHitArea = new Graphics();
 
   private readonly _avatarLayer = new Container();
@@ -330,7 +336,7 @@ export class MagicWordsScene extends Scene {
       if (charsToReveal > 0) {
         if (!this._isTypingSoundActive) {
           this._isTypingSoundActive = true;
-          startGlobalLoopedSoundEffect("typing");
+          startGlobalLoopedSoundEffect(AssetAlias.Typing);
         }
 
         this._typewriterAccumulator -=
@@ -412,6 +418,8 @@ export class MagicWordsScene extends Scene {
       this._errorMessage = "";
       this._dialogueIndex = 0;
 
+      // The scene is fully data-driven after this point; visuals are rebuilt from
+      // the current dialogue index whenever layout or state changes.
       this._applyReadyVisibility(true);
       this._setupDialogueAtCurrentIndex();
       this._updateStatusText();
@@ -534,6 +542,8 @@ export class MagicWordsScene extends Scene {
       emojiTextures: this._emojiTextures,
     });
 
+    // Rebuild from scratch on each reveal step to keep mixed text/emoji layout
+    // deterministic across font sizes and viewport changes.
     const messageY =
       this._panelY +
       DIALOGUE_PANEL_TOP_PADDING +
@@ -569,6 +579,7 @@ export class MagicWordsScene extends Scene {
           DIALOGUE_TAIL_SIDE_INSET * this._uiScale
         : this._panelX + DIALOGUE_TAIL_SIDE_INSET * this._uiScale;
 
+    // The speech-tail flips horizontally to point toward the currently speaking avatar.
     this._dialoguePanel
       .clear()
       .roundRect(
@@ -624,6 +635,7 @@ export class MagicWordsScene extends Scene {
     const totalCharacters = countVisibleCharacters(this._currentTokens);
 
     if (!this._currentDialogueDone) {
+      // First tap completes the active line immediately; the next tap advances.
       this._visibleCharacterCount = totalCharacters;
       this._currentDialogueDone = true;
       this._stopTypingSound();
@@ -648,6 +660,6 @@ export class MagicWordsScene extends Scene {
     }
 
     this._isTypingSoundActive = false;
-    stopGlobalLoopedSoundEffect("typing");
+    stopGlobalLoopedSoundEffect(AssetAlias.Typing);
   }
 }

@@ -5,6 +5,7 @@ export const MOBILE_GAME_SCALE = 0.4;
 export const MOBILE_BREAKPOINT = 700;
 export const DIALOGUE_ENDPOINT =
   "https://private-624120-softgamesassignment.apiary-mock.com/v2/magicwords";
+export const DEMO_TITLE = "PIXI 8 Game Demo";
 
 export const enum SceneId {
   MainMenu = "main-menu",

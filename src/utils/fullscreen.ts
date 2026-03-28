@@ -7,6 +7,9 @@ type FullscreenCapableDocument = Document & {
   webkitExitFullscreen?: () => Promise<void> | void;
 };
 
+/**
+ * Returns whether the current browser exposes any supported fullscreen API.
+ */
 export function isFullscreenSupported(): boolean {
   const element = document.documentElement as FullscreenCapableElement;
   const fullscreenDocument = document as FullscreenCapableDocument;
@@ -19,6 +22,9 @@ export function isFullscreenSupported(): boolean {
   );
 }
 
+/**
+ * Checks both standard and WebKit-prefixed fullscreen state.
+ */
 export function isFullscreenActive(): boolean {
   const fullscreenDocument = document as FullscreenCapableDocument;
 
@@ -28,6 +34,9 @@ export function isFullscreenActive(): boolean {
   );
 }
 
+/**
+ * Toggles fullscreen using the standard API with a WebKit fallback for Safari.
+ */
 export async function toggleFullscreen(
   target: HTMLElement = document.documentElement,
 ): Promise<void> {

@@ -1,19 +1,20 @@
 import { Assets, Container, Sprite, Text, TextStyle, Texture } from "pixi.js";
+
 import {
   startGlobalLoopedSoundEffect,
   stopGlobalLoopedSoundEffect,
 } from "../app/AudioManager";
-
 import {
   SceneId,
   MOBILE_UI_SCALE,
   MOBILE_GAME_SCALE,
   MOBILE_BREAKPOINT,
 } from "../app/config";
-
+import { AssetAlias } from "../assets/aliases";
 import { Scene, type SceneContext } from "../core/Scene";
 import { UIButton } from "../ui/UIButton";
 import { getSafeAreaInsetPx } from "../utils/safeArea";
+
 import { FLAME_PARTS, type FlamePartConfig } from "./phoenixFlame/flameParts";
 
 interface PhoenixSceneCallbacks {
@@ -34,6 +35,9 @@ interface FlamePart {
   config: FlamePartConfig;
 }
 
+/**
+ * Data-driven layered flame effect built from a handful of animated sprites.
+ */
 export class PhoenixFlameScene extends Scene {
   public readonly id = SceneId.PhoenixFlame;
 
@@ -103,16 +107,17 @@ export class PhoenixFlameScene extends Scene {
   }
 
   public override onEnter(): void {
-    startGlobalLoopedSoundEffect("fire-crackling");
+    startGlobalLoopedSoundEffect(AssetAlias.FireCrackling);
   }
 
   public override onExit(): void {
-    stopGlobalLoopedSoundEffect("fire-crackling");
+    stopGlobalLoopedSoundEffect(AssetAlias.FireCrackling);
   }
 
   public override update(context: SceneContext): void {
     this._elapsedSeconds += context.deltaTimeMs / 1000;
 
+    // A subtle shared pulse ties the independently animated layers together.
     const globalPulse = 1 + Math.sin(this._elapsedSeconds * 2.1) * 0.025;
 
     for (const part of this._flameParts) {
@@ -143,6 +148,8 @@ export class PhoenixFlameScene extends Scene {
 
   private _createFlameSprites(): void {
     for (const config of FLAME_PARTS) {
+      // Flame behavior is authored entirely through config so art and timing can
+      // be tuned without rewriting the update loop.
       const texture =
         (Assets.get(config.alias) as Texture | undefined) ?? Texture.WHITE;
 

@@ -1,5 +1,8 @@
 import { type Texture } from "pixi.js";
 
+/**
+ * Remote dialogue payload contract used by the Magic Words scene.
+ */
 export interface DialogueLine {
   name: string;
   text: string;

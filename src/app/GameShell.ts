@@ -1,18 +1,5 @@
 import { Application, Assets, Container } from "pixi.js";
 
-import { AudioManager } from "./AudioManager";
-import {
-  BundleName,
-  MOBILE_BREAKPOINT,
-  MOBILE_UI_SCALE,
-  SceneId,
-  type PlayableSceneId,
-} from "./config";
-import { createApp } from "./createApp";
-import {
-  readMusicEnabledPreference,
-  writeMusicEnabledPreference,
-} from "./audioPreferences";
 import { type Scene } from "../core/Scene";
 import { SceneManager } from "../core/SceneManager";
 import { MainMenuScene } from "../scenes/MainMenuScene";
@@ -28,6 +15,20 @@ import {
   toggleFullscreen,
 } from "../utils/fullscreen";
 
+import { AudioManager } from "./AudioManager";
+import {
+  BundleName,
+  MOBILE_BREAKPOINT,
+  MOBILE_UI_SCALE,
+  SceneId,
+  type PlayableSceneId,
+} from "./config";
+import { createApp } from "./createApp";
+import {
+  readMusicEnabledPreference,
+  writeMusicEnabledPreference,
+} from "./audioPreferences";
+
 const FULLSCREEN_BUTTON_MARGIN_X = 20;
 const FULLSCREEN_BUTTON_MARGIN_Y = 40;
 const MUTE_BUTTON_MARGIN_Y = 28;
@@ -40,6 +41,9 @@ const FPS_MARGIN_Y = 10;
 const MUTE_ENABLED_LABEL = "Mute Sounds";
 const MUTE_DISABLED_LABEL = "Enable Sounds";
 
+/**
+ * Bootstraps the Pixi app and hands execution over to the shell.
+ */
 export async function bootstrapGame(): Promise<void> {
   const app = await createApp();
   const shell = new GameShell(app);
@@ -47,7 +51,15 @@ export async function bootstrapGame(): Promise<void> {
   shell.start();
 }
 
+/**
+ * App-level orchestrator that sits above individual scenes.
+ *
+ * It owns the persistent UI overlays, manages scene transitions, coordinates
+ * bundle loading, and keeps layout/audio controls responsive across devices.
+ */
 class GameShell {
+  // Gameplay content and shell UI live on separate layers so scene changes never
+  // disturb overlays or global controls.
   private readonly _worldLayer = new Container();
   private readonly _uiLayer = new Container();
   private readonly _sceneManager = new SceneManager(this._worldLayer);
@@ -164,6 +176,8 @@ class GameShell {
   private readonly _requestRelayoutTwice = (): void => {
     this._needsRelayout = true;
 
+    // Fullscreen and mobile orientation changes can briefly report stale viewport
+    // metrics, so we queue a couple of follow-up layout passes to settle safely.
     requestAnimationFrame(() => {
       this._needsRelayout = true;
     });
@@ -198,6 +212,8 @@ class GameShell {
     this._loadingOverlay.show();
 
     try {
+      // Bundles are scene-scoped, so the menu stays fast and each showcase loads
+      // only what it needs.
       await Assets.loadBundle(bundle, (progress) => {
         this._loadingOverlay.setProgress(progress);
       });
@@ -341,6 +357,7 @@ class GameShell {
     const isMobile = shortSide < MOBILE_BREAKPOINT;
     const scale = isMobile ? MOBILE_UI_SCALE : 1;
 
+    // Read CSS safe-area values so controls stay clear of notches and home bars.
     const safeAreaTop = getSafeAreaInsetPx("--sat");
     const safeAreaRight = getSafeAreaInsetPx("--sar");
     const safeAreaBottom = getSafeAreaInsetPx("--sab");

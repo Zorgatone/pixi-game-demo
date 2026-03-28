@@ -11,6 +11,9 @@ const MS_PER_SECOND = 1000;
 const FPS_TEXT_FILL = 0xffffff;
 const FPS_FONT_FAMILY = "Arial";
 
+/**
+ * Lightweight FPS display for quick performance validation during development.
+ */
 export class FPSCounter {
   public readonly view: Text;
 

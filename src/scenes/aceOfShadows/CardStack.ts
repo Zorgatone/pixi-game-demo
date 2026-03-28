@@ -6,6 +6,10 @@ export interface CardStackMetrics {
   cardOffsetY: number;
 }
 
+/**
+ * Utility container that owns a stack of cards plus any "reserved" future slots
+ * for cards that are currently flying toward it.
+ */
 export class CardStack extends Container {
   private readonly _cards: Sprite[] = [];
   private _incomingCards = 0;
@@ -62,6 +66,8 @@ export class CardStack extends Container {
   }
 
   public reserveIncomingSlot(): number {
+    // Reserve the landing slot before the animation starts so active cards can
+    // retarget correctly if the layout changes mid-flight.
     const slotIndex = this._cards.length + this._incomingCards;
     this._incomingCards += 1;
     return slotIndex;

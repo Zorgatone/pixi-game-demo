@@ -1,12 +1,14 @@
 import { type BLEND_MODES } from "pixi.js";
 
+import { AssetAlias } from "../../assets/aliases";
+
 export type FlameAssetAlias =
-  | "halo"
-  | "flame_large"
-  | "flame_medium"
-  | "flame_small"
-  | "ember"
-  | "spark";
+  | AssetAlias.Halo
+  | AssetAlias.FlameLarge
+  | AssetAlias.FlameMedium
+  | AssetAlias.FlameSmall
+  | AssetAlias.Ember
+  | AssetAlias.Spark;
 
 export interface FlamePartConfig {
   alias: FlameAssetAlias;
@@ -24,9 +26,11 @@ export interface FlamePartConfig {
   phase: number;
 }
 
+// Keeping flame tuning data separate from the scene makes the effect easier to
+// iterate on without touching runtime logic.
 export const FLAME_PARTS: readonly FlamePartConfig[] = [
   {
-    alias: "halo",
+    alias: AssetAlias.Halo,
     blendMode: "add",
     baseX: 0,
     baseY: 12,
@@ -41,7 +45,7 @@ export const FLAME_PARTS: readonly FlamePartConfig[] = [
     phase: 0.1,
   },
   {
-    alias: "flame_large",
+    alias: AssetAlias.FlameLarge,
     blendMode: "add",
     baseX: 0,
     baseY: 28,
@@ -56,7 +60,7 @@ export const FLAME_PARTS: readonly FlamePartConfig[] = [
     phase: 0.35,
   },
   {
-    alias: "flame_medium",
+    alias: AssetAlias.FlameMedium,
     blendMode: "add",
     baseX: -78,
     baseY: 64,
@@ -71,7 +75,7 @@ export const FLAME_PARTS: readonly FlamePartConfig[] = [
     phase: 1.15,
   },
   {
-    alias: "flame_medium",
+    alias: AssetAlias.FlameMedium,
     blendMode: "add",
     baseX: 78,
     baseY: 64,
@@ -86,7 +90,7 @@ export const FLAME_PARTS: readonly FlamePartConfig[] = [
     phase: 2.2,
   },
   {
-    alias: "flame_large",
+    alias: AssetAlias.FlameLarge,
     blendMode: "add",
     baseX: 0,
     baseY: 74,
@@ -101,7 +105,7 @@ export const FLAME_PARTS: readonly FlamePartConfig[] = [
     phase: 0.75,
   },
   {
-    alias: "flame_small",
+    alias: AssetAlias.FlameSmall,
     blendMode: "add",
     baseX: -64,
     baseY: 132,
@@ -116,7 +120,7 @@ export const FLAME_PARTS: readonly FlamePartConfig[] = [
     phase: 1.8,
   },
   {
-    alias: "flame_small",
+    alias: AssetAlias.FlameSmall,
     blendMode: "add",
     baseX: 64,
     baseY: 132,
@@ -131,7 +135,7 @@ export const FLAME_PARTS: readonly FlamePartConfig[] = [
     phase: 2.95,
   },
   {
-    alias: "ember",
+    alias: AssetAlias.Ember,
     blendMode: "add",
     baseX: -118,
     baseY: 92,
@@ -146,7 +150,7 @@ export const FLAME_PARTS: readonly FlamePartConfig[] = [
     phase: 0.9,
   },
   {
-    alias: "ember",
+    alias: AssetAlias.Ember,
     blendMode: "add",
     baseX: 118,
     baseY: 88,
@@ -161,7 +165,7 @@ export const FLAME_PARTS: readonly FlamePartConfig[] = [
     phase: 2.45,
   },
   {
-    alias: "spark",
+    alias: AssetAlias.Spark,
     blendMode: "add",
     baseX: 0,
     baseY: 160,

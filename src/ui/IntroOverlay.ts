@@ -1,5 +1,7 @@
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 
+import { DEMO_TITLE } from "../app/config";
+
 import { UIButton } from "./UIButton";
 
 const PANEL_WIDTH = 520;
@@ -16,6 +18,9 @@ export interface IntroOverlayOptions {
   onEnter: () => void;
 }
 
+/**
+ * Full-screen entry gate shown before the user opts into starting the demo.
+ */
 export class IntroOverlay extends Container {
   private readonly _dim = new Graphics();
   private readonly _panel = new Graphics();
@@ -27,7 +32,7 @@ export class IntroOverlay extends Container {
     super();
 
     this._title = new Text({
-      text: "PIXI 8 Game Demo",
+      text: DEMO_TITLE,
       style: new TextStyle({
         fill: 0xffffff,
         fontSize: TITLE_FONT_SIZE,

@@ -41,6 +41,8 @@ function buildMissingEmojiUrl(name: string): string {
 }
 
 function buildMissingAvatarUrl(name: string): string {
+  // Missing speakers are generated deterministically so the same name always
+  // maps to the same fallback appearance.
   const hash = hashString(name);
 
   const bodies = ["squared", "checkered"] as const;
@@ -100,6 +102,12 @@ async function loadRemoteTexture(url: string): Promise<Texture> {
   });
 }
 
+/**
+ * Loads the remote dialogue payload plus any textures required to present it.
+ *
+ * The endpoint can omit avatars or emojis; missing entries are synthesized so
+ * the scene stays robust against partial content.
+ */
 export async function loadDialogueResources(
   endpoint: string,
   signal?: AbortSignal,
@@ -165,6 +173,7 @@ export async function loadDialogueResources(
   const emojiTextures = new Map<string, Texture>();
   const avatarTextures = new Map<string, LoadedAvatar>();
 
+  // Load all referenced images in parallel once the final dependency set is known.
   await Promise.all([
     ...Array.from(emojiDefinitions.values()).map(async (emoji) => {
       const texture = await loadRemoteTexture(emoji.url);

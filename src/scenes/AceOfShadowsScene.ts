@@ -8,18 +8,19 @@ import {
   Texture,
 } from "pixi.js";
 import gsap from "gsap";
-import { playGlobalSoundEffect } from "../app/AudioManager";
 
+import { playGlobalSoundEffect } from "../app/AudioManager";
 import {
   SceneId,
   MOBILE_UI_SCALE,
   MOBILE_GAME_SCALE,
   MOBILE_BREAKPOINT,
 } from "../app/config";
-
+import { AssetAlias } from "../assets/aliases";
 import { Scene, type SceneContext } from "../core/Scene";
 import { UIButton } from "../ui/UIButton";
 import { getSafeAreaInsetPx } from "../utils/safeArea";
+
 import { CardStack } from "./aceOfShadows/CardStack";
 
 interface AceSceneCallbacks {
@@ -66,12 +67,18 @@ interface MovingCardAnimation {
   timeline: gsap.core.Timeline;
 }
 
+/**
+ * Demonstrates deterministic card motion between stacks, including resize-safe
+ * retargeting for cards already in flight.
+ */
 export class AceOfShadowsScene extends Scene {
   public readonly id = SceneId.AceOfShadows;
 
   private readonly _title: Text;
   private readonly _backButton: UIButton;
 
+  // Stacked cards remain in one layer while animated cards move through a
+  // dedicated overlay layer so z-order stays predictable.
   private readonly _stackLayer = new Container();
   private readonly _flyingLayer = new Container();
   private readonly _stacks: CardStack[] = [];
@@ -256,7 +263,7 @@ export class AceOfShadowsScene extends Scene {
 
   private _createCards(): void {
     const texture =
-      (Assets.get("card") as Texture | undefined) ?? Texture.WHITE;
+      (Assets.get(AssetAlias.Card) as Texture | undefined) ?? Texture.WHITE;
 
     for (let i = 0; i < TOTAL_CARDS; i += 1) {
       const card = new Sprite(texture);
@@ -317,13 +324,15 @@ export class AceOfShadowsScene extends Scene {
       return;
     }
 
+    // Reserve the destination slot before the card launches so the target stack
+    // can report a stable landing position during resizes.
     const slotIndex = destinationStack.reserveIncomingSlot();
     const to = destinationStack.getReservedSlotPositionInAncestor(
       slotIndex,
       this.root,
     );
 
-    playGlobalSoundEffect("card-flip");
+    playGlobalSoundEffect(AssetAlias.CardFlip);
 
     card.rotation = 0;
     card.zIndex = 10_000;
@@ -406,6 +415,8 @@ export class AceOfShadowsScene extends Scene {
       this._flyingRotation *
       (0.7 + Math.random() * 0.3);
 
+    // The path is authored as independent x/y/lift/rotation tweens so the motion
+    // reads like a quick card throw instead of a straight linear slide.
     const timeline = gsap.timeline({
       onUpdate: () => {
         this._applyAnimationState(animation);
@@ -557,6 +568,7 @@ export class AceOfShadowsScene extends Scene {
 
       oldTimeline.kill();
 
+      // Rebuild the remainder of each animation against the resized stack layout.
       const newTarget =
         animation.destinationStack.getReservedSlotPositionInAncestor(
           animation.slotIndex,

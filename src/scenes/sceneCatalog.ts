@@ -1,13 +1,17 @@
+import { BundleName, SceneId, type PlayableSceneId } from "../app/config";
 import { type Scene } from "../core/Scene";
+
 import { AceOfShadowsScene } from "./AceOfShadowsScene";
 import { MagicWordsScene } from "./MagicWordsScene";
 import { PhoenixFlameScene } from "./PhoenixFlameScene";
-import { BundleName, SceneId, type PlayableSceneId } from "../app/config";
 
 interface SceneCallbacks {
   onBackToMenu: () => void;
 }
 
+/**
+ * Central registry used by the main menu and shell to build playable scenes.
+ */
 export interface PlayableSceneDefinition {
   id: PlayableSceneId;
   label: string;

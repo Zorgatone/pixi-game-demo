@@ -1,6 +1,7 @@
 import { Container, Text, TextStyle } from "pixi.js";
 
 import {
+  DEMO_TITLE,
   MOBILE_BREAKPOINT,
   MOBILE_UI_SCALE,
   SceneId,
@@ -8,6 +9,7 @@ import {
 } from "../app/config";
 import { Scene } from "../core/Scene";
 import { UIButton } from "../ui/UIButton";
+
 import { MAIN_MENU_ITEMS } from "./sceneCatalog";
 
 const MENU_TEXT_FILL = 0xffffff;
@@ -23,6 +25,9 @@ type MenuCallbacks = {
   onSelect: (sceneId: PlayableSceneId) => void;
 };
 
+/**
+ * Small scene that lists the playable showcases and hands selection back to the shell.
+ */
 export class MainMenuScene extends Scene {
   public readonly id = SceneId.MainMenu;
 
@@ -34,7 +39,7 @@ export class MainMenuScene extends Scene {
     super();
 
     this._title = new Text({
-      text: "PIXI 8 Game Demo",
+      text: DEMO_TITLE,
       style: new TextStyle({
         fill: MENU_TEXT_FILL,
         fontSize: TITLE_FONT_SIZE,

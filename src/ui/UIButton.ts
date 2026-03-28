@@ -22,6 +22,9 @@ export interface UIButtonOptions {
   onClick: () => void;
 }
 
+/**
+ * Shared Pixi button component used by menus, overlays, and scene controls.
+ */
 export class UIButton extends Container {
   private readonly _bg: Graphics;
   private readonly _text: Text;

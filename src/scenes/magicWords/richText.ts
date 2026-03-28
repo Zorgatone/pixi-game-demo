@@ -43,6 +43,10 @@ function makeFallbackEmoji(label: string, size: number): Container {
   return root;
 }
 
+/**
+ * Splits a dialogue string into text and `{emoji_name}` tokens while preserving
+ * whitespace as explicit tokens for incremental typewriter reveals.
+ */
 export function tokenizeRichText(text: string): RichToken[] {
   return text.split(/(\{[a-zA-Z0-9_]+\})/).flatMap((part): RichToken[] => {
     if (!part) {
@@ -80,6 +84,11 @@ interface VisibleRichTextOptions {
   emojiTextures: ReadonlyMap<string, Texture>;
 }
 
+/**
+ * Builds a Pixi container containing only the currently visible portion of the
+ * dialogue line. Text and emoji are laid out manually because Pixi text cannot
+ * inline arbitrary textures.
+ */
 export function createVisibleRichText({
   tokens,
   visibleCharacters,
@@ -154,6 +163,7 @@ export function createVisibleRichText({
     fullMeasureNode.destroy();
 
     if (cursorX > 0 && !isWhitespace && cursorX + wrapWidth > maxWidth) {
+      // Avoid wrapping pure whitespace to the next line by itself.
       cursorX = 0;
       cursorY += currentLineMaxHeight + LINE_GAP;
       currentLineMaxHeight = lineHeight;
