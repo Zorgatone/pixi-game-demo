@@ -7,9 +7,9 @@ import { APP_BG } from "./config";
 const CURSOR_HOTSPOT_X = 4;
 const CURSOR_HOTSPOT_Y = 2;
 
-const DEFAULT_CURSOR = `url("/assets/cursor.png") ${CURSOR_HOTSPOT_X} ${CURSOR_HOTSPOT_Y}, default`;
-const POINTER_CURSOR = `url("/assets/pointer.png") ${CURSOR_HOTSPOT_X} ${CURSOR_HOTSPOT_Y}, pointer`;
-const NOT_ALLOWED_CURSOR = `url("/assets/not-allowed.png") ${CURSOR_HOTSPOT_X} ${CURSOR_HOTSPOT_Y}, not-allowed`;
+const DEFAULT_CURSOR = `url("assets/cursor.png") ${CURSOR_HOTSPOT_X} ${CURSOR_HOTSPOT_Y}, default`;
+const POINTER_CURSOR = `url("assets/pointer.png") ${CURSOR_HOTSPOT_X} ${CURSOR_HOTSPOT_Y}, pointer`;
+const NOT_ALLOWED_CURSOR = `url("assets/not-allowed.png") ${CURSOR_HOTSPOT_X} ${CURSOR_HOTSPOT_Y}, not-allowed`;
 
 function applyCustomCursorStyles(
   app: Application,
