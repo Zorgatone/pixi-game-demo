@@ -40,6 +40,7 @@ const FPS_MARGIN_X = 12;
 const FPS_MARGIN_Y = 10;
 const MUTE_ENABLED_LABEL = "Mute Sounds";
 const MUTE_DISABLED_LABEL = "Enable Sounds";
+const RELAYOUT_SETTLE_TIMEOUTS_MS = [100, 250, 500, 1000] as const;
 
 /**
  * Bootstraps the Pixi app and hands execution over to the shell.
@@ -108,6 +109,8 @@ class GameShell {
   private _previousTime = performance.now();
   private _previousWidth: number;
   private _previousHeight: number;
+  private _relayoutFrameId: number | null = null;
+  private readonly _relayoutTimeoutIds = new Set<number>();
 
   public constructor(private readonly _app: Application) {
     this._previousWidth = this._app.screen.width;
@@ -166,38 +169,64 @@ class GameShell {
 
   private readonly _handleFullscreenChange = (): void => {
     this._updateFullscreenButtonState();
-    this._requestRelayoutTwice();
+    this._requestRelayoutSettled();
   };
 
   private readonly _requestRelayout = (): void => {
+    // Pixi auto-resize listens to window resize, but mobile browsers can update
+    // the container size after the first event. Re-queueing a measurement here
+    // lets follow-up settle passes catch those delayed viewport changes.
+    this._app.queueResize();
     this._needsRelayout = true;
   };
 
-  private readonly _requestRelayoutTwice = (): void => {
-    this._needsRelayout = true;
+  private readonly _requestRelayoutSettled = (): void => {
+    this._requestRelayout();
+    this._clearScheduledRelayouts();
 
-    // Fullscreen and mobile orientation changes can briefly report stale viewport
-    // metrics, so we queue a couple of follow-up layout passes to settle safely.
-    requestAnimationFrame(() => {
-      this._needsRelayout = true;
+    // Mobile rotation and fullscreen transitions can keep updating CSS viewport
+    // units and safe-area values after the first resize event, especially on
+    // iOS browsers. Keep nudging Pixi/layout for a short settle window.
+    this._relayoutFrameId = requestAnimationFrame(() => {
+      this._relayoutFrameId = null;
+      this._requestRelayout();
     });
 
-    window.setTimeout(() => {
-      this._needsRelayout = true;
-    }, 150);
+    for (const delayMs of RELAYOUT_SETTLE_TIMEOUTS_MS) {
+      const timeoutId = window.setTimeout(() => {
+        this._relayoutTimeoutIds.delete(timeoutId);
+        this._requestRelayout();
+      }, delayMs);
+
+      this._relayoutTimeoutIds.add(timeoutId);
+    }
   };
 
   private _bindEvents(): void {
     document.addEventListener("fullscreenchange", this._handleFullscreenChange);
-    window.addEventListener("resize", this._requestRelayout);
+    window.addEventListener("resize", this._requestRelayoutSettled);
+    window.addEventListener("orientationchange", this._requestRelayoutSettled);
     window.screen.orientation?.addEventListener?.(
       "change",
-      this._requestRelayoutTwice,
+      this._requestRelayoutSettled,
     );
     window.visualViewport?.addEventListener?.(
       "resize",
-      this._requestRelayoutTwice,
+      this._requestRelayoutSettled,
     );
+  }
+
+  private _clearScheduledRelayouts(): void {
+    if (this._relayoutFrameId !== null) {
+      cancelAnimationFrame(this._relayoutFrameId);
+      this._relayoutFrameId = null;
+    }
+
+    for (const timeoutId of this._relayoutTimeoutIds) {
+      window.clearTimeout(timeoutId);
+    }
+
+    this._relayoutTimeoutIds.clear();
   }
 
   private _showScene(scene: Scene): void {
