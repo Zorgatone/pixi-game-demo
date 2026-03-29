@@ -3,6 +3,7 @@ import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import { DEMO_TITLE } from "../app/config";
 
 import { UIButton } from "./UIButton";
+import { UI_FONT_FAMILY } from "./fonts";
 
 const PANEL_WIDTH = 520;
 const PANEL_HEIGHT = 300;
@@ -36,6 +37,7 @@ export class IntroOverlay extends Container {
       style: new TextStyle({
         fill: 0xffffff,
         fontSize: TITLE_FONT_SIZE,
+        fontFamily: UI_FONT_FAMILY,
         fontWeight: "bold",
         align: "center",
       }),
@@ -47,6 +49,7 @@ export class IntroOverlay extends Container {
       style: new TextStyle({
         fill: 0xd6daf5,
         fontSize: SUBTITLE_FONT_SIZE,
+        fontFamily: UI_FONT_FAMILY,
         align: "center",
       }),
     });

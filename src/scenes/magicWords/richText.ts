@@ -7,6 +7,8 @@ import {
   type Texture,
 } from "pixi.js";
 
+import { DIALOGUE_FONT_FAMILY } from "../../ui/fonts";
+
 import { type RichToken } from "./types";
 
 const TEXT_FILL = 0xffffff;
@@ -32,6 +34,7 @@ function makeFallbackEmoji(label: string, size: number): Container {
     style: new TextStyle({
       fill: FALLBACK_EMOJI_TEXT,
       fontSize: size * 0.42,
+      fontFamily: DIALOGUE_FONT_FAMILY,
       fontWeight: "bold",
     }),
   });
@@ -101,6 +104,8 @@ export function createVisibleRichText({
   const messageTextStyle = new TextStyle({
     fill: TEXT_FILL,
     fontSize,
+    fontFamily: DIALOGUE_FONT_FAMILY,
+    fontWeight: "normal",
     wordWrap: false,
   });
 

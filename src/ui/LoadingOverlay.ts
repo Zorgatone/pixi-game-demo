@@ -1,5 +1,7 @@
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 
+import { UI_FONT_FAMILY } from "./fonts";
+
 const PANEL_OFFSET_Y = -20;
 
 const DEFAULT_BAR_WIDTH = 320;
@@ -49,6 +51,7 @@ export class LoadingOverlay extends Container {
       style: new TextStyle({
         fill: 0xffffff,
         fontSize: options.labelFontSize ?? DEFAULT_LABEL_FONT_SIZE,
+        fontFamily: UI_FONT_FAMILY,
         fontWeight: "bold",
       }),
     });

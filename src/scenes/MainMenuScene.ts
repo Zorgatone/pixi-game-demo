@@ -9,6 +9,7 @@ import {
 } from "../app/config";
 import { Scene } from "../core/Scene";
 import { UIButton } from "../ui/UIButton";
+import { UI_FONT_FAMILY } from "../ui/fonts";
 
 import { MAIN_MENU_ITEMS } from "./sceneCatalog";
 
@@ -43,6 +44,7 @@ export class MainMenuScene extends Scene {
       style: new TextStyle({
         fill: MENU_TEXT_FILL,
         fontSize: TITLE_FONT_SIZE,
+        fontFamily: UI_FONT_FAMILY,
         fontWeight: "bold",
       }),
     });

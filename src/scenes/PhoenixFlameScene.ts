@@ -13,6 +13,7 @@ import {
 import { AssetAlias } from "../assets/aliases";
 import { Scene, type SceneContext } from "../core/Scene";
 import { UIButton } from "../ui/UIButton";
+import { UI_FONT_FAMILY } from "../ui/fonts";
 import { getSafeAreaInsetPx } from "../utils/safeArea";
 
 import { FLAME_PARTS, type FlamePartConfig } from "./phoenixFlame/flameParts";
@@ -57,6 +58,7 @@ export class PhoenixFlameScene extends Scene {
       style: new TextStyle({
         fill: 0xffffff,
         fontSize: LABEL_FONT_SIZE,
+        fontFamily: UI_FONT_FAMILY,
         fontWeight: "bold",
       }),
     });
