@@ -12,7 +12,20 @@ export const manifest: AssetsManifest = {
   bundles: [
     {
       name: BundleName.Shared,
-      assets: [],
+      assets: [
+        {
+          alias: AssetAlias.Cursor,
+          src: "assets/cursor.png",
+        },
+        {
+          alias: AssetAlias.NotAllowed,
+          src: "assets/not-allowed.png",
+        },
+        {
+          alias: AssetAlias.Pointer,
+          src: "assets/pointer.png",
+        },
+      ],
     },
     {
       name: BundleName.MainMenu,

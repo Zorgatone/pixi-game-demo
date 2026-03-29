@@ -1,6 +1,7 @@
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 
 import { playGlobalUiClickSound } from "../app/AudioManager";
+import { UI_FONT_FAMILY } from "./fonts";
 
 const DEFAULT_WIDTH = 220;
 const DEFAULT_HEIGHT = 56;
@@ -52,6 +53,7 @@ export class UIButton extends Container {
       style: new TextStyle({
         fill: NORMAL_TEXT_FILL,
         fontSize: this._fontSize,
+        fontFamily: UI_FONT_FAMILY,
       }),
     });
 

@@ -22,6 +22,7 @@ import {
 } from "../app/AudioManager";
 import { Scene, type SceneContext } from "../core/Scene";
 import { UIButton } from "../ui/UIButton";
+import { DIALOGUE_FONT_FAMILY, UI_FONT_FAMILY } from "../ui/fonts";
 import { getSafeAreaInsetPx } from "../utils/safeArea";
 
 import { loadDialogueResources } from "./magicWords/dialogueLoader";
@@ -52,7 +53,7 @@ const BACK_BUTTON_HEIGHT = 56;
 const BACK_BUTTON_FONT_SIZE = 22;
 
 const STATUS_FONT_SIZE = 24;
-const NAME_FONT_SIZE = 24;
+const NAME_FONT_SIZE = 34;
 const MESSAGE_FONT_SIZE = 28;
 const PROMPT_FONT_SIZE = 20;
 
@@ -99,6 +100,7 @@ function makeStatusTextStyle(fontSize: number): TextStyle {
   return new TextStyle({
     fill: TEXT_FILL,
     fontSize,
+    fontFamily: UI_FONT_FAMILY,
     fontWeight: "bold",
     align: "center",
     wordWrap: true,
@@ -110,6 +112,7 @@ function makeNameTextStyle(fontSize: number): TextStyle {
   return new TextStyle({
     fill: NAME_FILL,
     fontSize,
+    fontFamily: DIALOGUE_FONT_FAMILY,
     fontWeight: "bold",
   });
 }
@@ -118,6 +121,7 @@ function makePromptTextStyle(fontSize: number): TextStyle {
   return new TextStyle({
     fill: PROMPT_FILL,
     fontSize,
+    fontFamily: UI_FONT_FAMILY,
     fontWeight: "bold",
   });
 }
@@ -179,6 +183,7 @@ export class MagicWordsScene extends Scene {
       style: new TextStyle({
         fill: TEXT_FILL,
         fontSize: LABEL_FONT_SIZE,
+        fontFamily: UI_FONT_FAMILY,
         fontWeight: "bold",
       }),
     });
